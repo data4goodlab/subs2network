@@ -1,10 +1,11 @@
 import networkx  as nx
-from consts import *
+from subs_grpah.consts import ROLES_GRAPH, ACTORS_GRAPH, IMDB_RATING, VIDEO_NAME, MOVIE_YEAR
 import numpy as np
-from utils import add_prefix_to_dict_keys
+from subs_grpah.utils import add_prefix_to_dict_keys
 import os
 import logging
-
+from subs_grpah.subtitle_fetcher import SubtitleFetcher
+from subs_grpah.subtitle_analyzer import SubtitleAnalyzer
 
 class VideoSnAnalyzer(object):
     def __init__(self, video_name, entities_links_dict, video_rating):
@@ -79,8 +80,7 @@ class VideoSnAnalyzer(object):
 
 
 if __name__ == "__main__":
-    from subtitle_fetcher import SubtitleFetcher
-    from subtitle_analyzer import SubtitleAnalyzer
+
 
     video_name = "The Godfather"
     movie = SubtitleFetcher.get_movie_obj(video_name, "The Godfather", 1972, "0068646")
@@ -93,5 +93,5 @@ if __name__ == "__main__":
     va.draw_graph(g, "The GodFather", None, None, "/home/graphlab/temp/%s Roles.png" % video_name)
     g = va.construct_social_network_graph(lambda n: n[0].get("name"))
     va.draw_graph(g, "The GodFather", None, None, "/home/graphlab/temp/%s Players.png" % video_name)
-    print nx.info(g)
-    print va.get_features_dict(g)
+    print(nx.info(g))
+    print(va.get_features_dict(g))

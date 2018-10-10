@@ -1,10 +1,10 @@
 from xml.dom.minidom import parseString
 import urllib2
-from consts import *
-from subtitle_analyzer import SubtitleAnalyzer
-import time
+from subs_grpah.consts import EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE, \
+    EPISODE_GUEST_STARTS, SERIES_ID, SEASON_ID, SEASON_NUMBER, DVD_SEASON, SERIES_NAME
 import logging
 import os
+
 
 class VideoDatasetsCreator(object):
     """
@@ -83,8 +83,8 @@ class VideoDatasetsCreator(object):
 if __name__ == "__main__":
     pass
     # create_series_dataset(176941, "Sherlock", "/home/graphlab/Series/sherlock.csv")
-    #for i in range(1,4):
-    #create_series_links_dataset(176941, i, None, 60, "/home/graphlab/Series/sherlock.csv", sn_outpath="/home/graphlab/Series/sherlock_sn.csv", subtitles_save_path="/home/graphlab/subtitles/Sherlock")
-    #movie_name = "The Lion King"
-    #create_movie_links_dataset(movie_name, movie_name, 1994, "0110357", 60,  "/home/graphlab/subtitles/movies", "/home/graphlab/movies/%s.sn.csv" % movie_name)
-    #cretate_actor_links_dataset("Kevin Bacon", 60, "/home/graphlab/actors/Kevin Bacon/subtitles", "/home/graphlab/actors/Kevin Bacon/graphs")
+    # for i in range(1,4):
+    # create_series_links_dataset(176941, i, None, 60, "/home/graphlab/Series/sherlock.csv", sn_outpath="/home/graphlab/Series/sherlock_sn.csv", subtitles_save_path="/home/graphlab/subtitles/Sherlock")
+    # movie_name = "The Lion King"
+    # create_movie_links_dataset(movie_name, movie_name, 1994, "0110357", 60,  "/home/graphlab/subtitles/movies", "/home/graphlab/movies/%s.sn.csv" % movie_name)
+    # cretate_actor_links_dataset("Kevin Bacon", 60, "/home/graphlab/actors/Kevin Bacon/subtitles", "/home/graphlab/actors/Kevin Bacon/graphs")

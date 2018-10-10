@@ -1,7 +1,6 @@
 import os
-from consts import *
-import subliminal
-from subliminal import video
+from subs_grpah.consts import IMDB_ID
+from subliminal import video, download_best_subtitles
 import babelfish
 import logging
 import cPickle
@@ -37,7 +36,7 @@ class SubtitleFetcher(object):
         if not os.path.isfile(p):
             logging.debug("Fetching  %s's best matched subtitle" % self.get_video_string())
             # This download the best subtitle as SRT file to the current directory
-            subtitle = subliminal.download_best_subtitles(set([self._video_obj]), set([self._lang],),
+            subtitle = download_best_subtitles(set([self._video_obj]), set([self._lang],),
                                                           hearing_impaired=False).values()[0][0]
             self._save_subtitle_info_dict(subtitle, path)
         logging.debug("Loading %s metadata from %s" % (self.get_video_string(), p))

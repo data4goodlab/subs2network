@@ -1,8 +1,9 @@
-from video_roles_analyzer import VideoRolesAnalyzer
+from subs_grpah.video_roles_analyzer import VideoRolesAnalyzer
 import pysrt
 from collections import Counter
-from consts import *
+from subs_grpah.consts import IMDB_ID, SUBTITLE_PATH
 import logging
+from subs_grpah.subtitle_fetcher import SubtitleFetcher
 
 
 class SubtitleAnalyzer(object):
@@ -71,12 +72,11 @@ class SubtitleAnalyzer(object):
 
 
 if __name__ == "__main__":
-    from subtitle_fetcher import SubtitleFetcher
 
     movie = SubtitleFetcher.get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)
     d = sf.fetch_subtitle("/home/graphlab/temp")
     sa = SubtitleAnalyzer(d)
-    print sa.get_subtitles_entities_links(60)
+    print(sa.get_subtitles_entities_links(60))
 
 

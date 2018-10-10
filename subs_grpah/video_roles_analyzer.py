@@ -1,6 +1,6 @@
 from imdb import IMDb
 from imdb.utils import RolesList
-from consts import *
+from subs_grpah.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
 import re
 import stop_words
 import logging
@@ -103,7 +103,7 @@ class VideoRolesAnalyzer(object):
 
 if __name__ == "__main__":
     vde = VideoRolesAnalyzer(636289)
-    print vde.find_roles_names_in_text("Sayid. l'm on it, Sayid sawyer.")
+    print(vde.find_roles_names_in_text("Sayid. l'm on it, Sayid sawyer."))
 
 
 
