@@ -7,6 +7,7 @@ import logging
 from subs_grpah.subtitle_fetcher import SubtitleFetcher
 from subs_grpah.subtitle_analyzer import SubtitleAnalyzer
 
+
 class VideoSnAnalyzer(object):
     def __init__(self, video_name, entities_links_dict, video_rating):
         self._entities_dict = entities_links_dict
@@ -15,12 +16,13 @@ class VideoSnAnalyzer(object):
 
     def _temp_func(self, n):
         if type(n[1]) == str:
-            return  n[1]
+            return n[1]
         else:
             return n[1].get("name")
+
     def construct_social_network_graph(self, graph_type=ROLES_GRAPH, min_weight=2):
         if graph_type == ROLES_GRAPH:
-            entity_func = self._temp_func#lambda n: n[1].get("name")
+            entity_func = self._temp_func  # lambda n: n[1].get("name")
         elif graph_type == ACTORS_GRAPH:
             entity_func = lambda n: n[0].get("name")  # Create actors graph
         else:
@@ -73,15 +75,12 @@ class VideoSnAnalyzer(object):
             d[u] = np.average(w)
         return d
 
-
     @property
     def video_rating(self):
         return self._video_rating
 
 
 if __name__ == "__main__":
-
-
     video_name = "The Godfather"
     movie = SubtitleFetcher.get_movie_obj(video_name, "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)

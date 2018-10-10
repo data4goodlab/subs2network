@@ -11,7 +11,7 @@ class SubtitleAnalyzer(object):
     Fetch and analyze subtitle of a movie and use it to construct the conncetion between the movie various roles
     """
 
-    def __init__(self, subtitle_info_dict, use_top_k_roles=None, ignore_roles_names=[]):
+    def __init__(self, subtitle_info_dict, use_top_k_roles=None, ignore_roles_names=None):
         """
         Construct the SubtitleAnalyzer and create the video's role time line based
         :param subtitle_info_dict: dict with the video metadata created by the SubtitleFetcher class
@@ -20,6 +20,8 @@ class SubtitleAnalyzer(object):
 
         """
 
+        if ignore_roles_names is None:
+            ignore_roles_names = []
         imdb_id = subtitle_info_dict[IMDB_ID]
         self._video_role_analyzer = VideoRolesAnalyzer(imdb_id, use_top_k_roles, ignore_roles_names)
 
@@ -53,7 +55,6 @@ class SubtitleAnalyzer(object):
                     edges += self._get_edges(entities1, entities2)
         return Counter(edges)
 
-
     def _get_edges(self, l1, l2):
         edges = []
         for v1 in l1:
@@ -65,18 +66,14 @@ class SubtitleAnalyzer(object):
                 edges.append((v1, v2))
         return edges
 
-
     @property
     def imdb_rating(self):
         return self._video_role_analyzer.rating()
 
 
 if __name__ == "__main__":
-
     movie = SubtitleFetcher.get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)
     d = sf.fetch_subtitle("/home/graphlab/temp")
     sa = SubtitleAnalyzer(d)
     print(sa.get_subtitles_entities_links(60))
-
-

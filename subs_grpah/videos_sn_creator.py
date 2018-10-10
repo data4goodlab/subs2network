@@ -43,14 +43,14 @@ class VideosSnCreator(object):
                                 movies_number=None, use_top_k_roles=None, timeelaps_seconds=60, graph_type=ACTORS_GRAPH,
                                 min_weight=2, ):
         graphs_list = []
-        for id, title, year in self.get_actor_movies(actor_name):
+        for m_id, title, year in self.get_actor_movies(actor_name):
             if year > MAX_YEAR:
                 continue
             if movies_number is not None and len(graphs_list) >= movies_number:
                 break
             movie_name = "%s (%s)" % (title, year)
             try:
-                g = self.get_movie_graph(movie_name, title, year, id, subtitles_path, use_top_k_roles=use_top_k_roles,
+                g = self.get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
                                          timeelaps_seconds=timeelaps_seconds, graph_type=graph_type,
                                          min_weight=min_weight)
                 graphs_list.append(g)
@@ -98,9 +98,9 @@ class VideosSnCreator(object):
                 self.save_movie_graph_to_csv(g, g.graph[VIDEO_NAME], g.graph[IMDB_RATING], csv_path, add_headers=True,
                                              sep=sep)
 
-    def draw_graphs(self, graphs_list, figures_path, format="png"):
+    def draw_graphs(self, graphs_list, figures_path, output_format="png"):
         for g in graphs_list:
-            draw_outpath = "%s/%s.%s" % (figures_path, g.graph[VIDEO_NAME], format)
+            draw_outpath = "%s/%s.%s" % (figures_path, g.graph[VIDEO_NAME], output_format)
             self.draw_graph(g, draw_outpath)
 
     def get_movie_graph(self, name, title, year, imdb_id, subtitles_path, use_top_k_roles=None, timeelaps_seconds=60,
@@ -166,10 +166,10 @@ class VideosSnCreator(object):
         movies_list = []
         m_list = im.get_person_filmography(p.getID())['data']['actor']
         for m in m_list:
-            id = m.getID()
+            m_id = m.getID()
             year = m.get('year')
             title = m.get('title')
-            movies_list.append((id, title, year))
+            movies_list.append((m_id, title, year))
         return movies_list
 
     def save_movie_graph_to_csv(self, g, movie_name, rating, outpath, add_headers=False, sep=";", append_to_file=True):
@@ -231,10 +231,10 @@ def create_dirs(t, name):
         pass
 
 
-def test_get_series(name, id, seasons_set, episodes_set):
+def test_get_series(name, s_id, seasons_set, episodes_set):
     create_dirs("series", name)
     v = VideosSnCreator()
-    graphs = v.get_series_graphs(name, id, seasons_set, episodes_set,
+    graphs = v.get_series_graphs(name, s_id, seasons_set, episodes_set,
                                  "/home/graphlab/series/%s/subtitles" % name)
     v.save_graphs_to_csv(graphs, "/home/graphlab/series/%s/csv" % name)
     v.draw_graphs(graphs, "/home/graphlab/series/%s/graphs" % name)
@@ -255,9 +255,9 @@ def test_get_movie(movie_title, year, imdb_id):
     create_dirs("movies", movie_title)
     v = VideosSnCreator()
     graphs = [v.get_movie_graph("%s (%s)" % (movie_title, year), movie_title, year, imdb_id,
-                                "/home/graphlab/movies/%s/subtitles" % (movie_title), use_top_k_roles=None,
+                                "/home/graphlab/movies/%s/subtitles" % movie_title, use_top_k_roles=None,
                                 min_weight=5)]
-    v.save_graphs_features(graphs, "/home/graphlab/movies/%s features.tsv" % (movie_title), True)
+    v.save_graphs_features(graphs, "/home/graphlab/movies/%s features.tsv" % movie_title, True)
     v.save_graphs_to_csv(graphs, "/home/graphlab/movies/%s/csv" % movie_title)
     v.draw_graphs(graphs, "/home/graphlab/movies/%s/graphs" % movie_title)
 

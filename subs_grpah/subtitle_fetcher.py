@@ -1,5 +1,5 @@
 import os
-from subs_grpah.consts import IMDB_ID
+from subs_grpah.consts import IMDB_ID, VIDEO_NAME
 from subliminal import video, download_best_subtitles
 import babelfish
 import logging
@@ -23,7 +23,6 @@ class SubtitleFetcher(object):
         self._video_obj = video_obj
         self._lang = lang
 
-
     def fetch_subtitle(self, path):
         """
         Fetch the subtilte using subliminal or from local file
@@ -36,8 +35,8 @@ class SubtitleFetcher(object):
         if not os.path.isfile(p):
             logging.debug("Fetching  %s's best matched subtitle" % self.get_video_string())
             # This download the best subtitle as SRT file to the current directory
-            subtitle = download_best_subtitles(set([self._video_obj]), set([self._lang],),
-                                                          hearing_impaired=False).values()[0][0]
+            subtitle = download_best_subtitles({self._video_obj}, {self._lang},
+                                               hearing_impaired=False).values()[0][0]
             self._save_subtitle_info_dict(subtitle, path)
         logging.debug("Loading %s metadata from %s" % (self.get_video_string(), p))
         return cPickle.load(file(p, "rb"))  # test if the subtitle object is loadable
@@ -94,11 +93,11 @@ class SubtitleFetcher(object):
         :return: list of strings with the most common season & episode names
         :rtype: list of [str]
         """
-        l = []
+        episode_name_list = []
 
         if self.is_episode:
-            l.append("S0%sE0%s" % (self._video_obj.season, self._video_obj.episode))
-            l.append("S%sE%s" % (self._video_obj.season, self._video_obj.episode))
+            episode_name_list.append("S0%sE0%s" % (self._video_obj.season, self._video_obj.episode))
+            episode_name_list.append("S%sE%s" % (self._video_obj.season, self._video_obj.episode))
             e = ""
             if self._video_obj.season < 10:
                 e += "S0%s" % self._video_obj.season
@@ -108,14 +107,14 @@ class SubtitleFetcher(object):
                 e += "E0%s" % self._video_obj.episode
             else:
                 e += "E%s" % self._video_obj.episode
-            l.append(e)
+            episode_name_list.append(e)
             e = "S0%s" % self._video_obj.season
             if self._video_obj.episode < 10:
                 e += "E0%s" % self._video_obj.episode
             else:
                 e += "E%s" % self._video_obj.episode
-            l.append(e)
-        return l
+            episode_name_list.append(e)
+        return episode_name_list
 
     @property
     def is_episode(self):
@@ -124,7 +123,7 @@ class SubtitleFetcher(object):
         :return: True if the video is TV series episode or False otherwise
         :rtype: bool
         """
-        return (type(self._video_obj) is video.Episode)
+        return type(self._video_obj) is video.Episode
 
     @property
     def is_movie(self):
@@ -133,7 +132,7 @@ class SubtitleFetcher(object):
         :return: True if the video is a movie or false otherwise
         :rtype: bool
         """
-        return (type(self._video_obj) is video.Movie)
+        return type(self._video_obj) is video.Movie
 
     @staticmethod
     def get_movie_obj(name, title, year, imdb_id):
@@ -146,7 +145,7 @@ class SubtitleFetcher(object):
         :return: video.Movie object
         :rtype: video.Movie
         """
-        logging.info("Fetching Subtitle For Movie:%s | Year: %s | IMDB ID: %s " % ( title, year, imdb_id))
+        logging.info("Fetching Subtitle For Movie:%s | Year: %s | IMDB ID: %s " % (title, year, imdb_id))
         return video.Movie(name=name, title=title, year=year, imdb_id=imdb_id)
 
     @staticmethod
@@ -163,7 +162,7 @@ class SubtitleFetcher(object):
         :rtype: video.Episode
         """
         logging.info("Fetching Subtitle Series:%s | Season: %s | Episode Number: %s | Name: %s, |ID: %s " % (
-        series, season_num, episode_num, episode_name, tvdb_id))
+            series, season_num, episode_num, episode_name, tvdb_id))
         return video.Episode(video_name, series, season_num, episode_num, title=episode_name, tvdb_id=tvdb_id)
 
 

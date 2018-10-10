@@ -25,8 +25,6 @@ SUBTITLE_PATH = "subtitle_path"
 MOVIE_YEAR = "movie_year"
 ROLES_GRAPH = "roles_graph"
 ACTORS_GRAPH = "actors_graph"
-MAX_YEAR= 2014
+MAX_YEAR = 2014
 TEMP_PATH = "/home/graphlab/temp"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"
-
-
