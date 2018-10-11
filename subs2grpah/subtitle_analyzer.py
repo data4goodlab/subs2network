@@ -1,9 +1,9 @@
-from subs_grpah.video_roles_analyzer import VideoRolesAnalyzer
+from subs2grpah.video_roles_analyzer import VideoRolesAnalyzer
 import pysrt
 from collections import Counter
-from subs_grpah.consts import IMDB_ID, SUBTITLE_PATH
+from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH
 import logging
-from subs_grpah.subtitle_fetcher import SubtitleFetcher
+from subs2grpah.subtitle_fetcher import SubtitleFetcher
 
 
 class SubtitleAnalyzer(object):
@@ -23,7 +23,7 @@ class SubtitleAnalyzer(object):
         if ignore_roles_names is None:
             ignore_roles_names = []
         imdb_id = subtitle_info_dict[IMDB_ID]
-        self._video_role_analyzer = VideoRolesAnalyzer(imdb_id, use_top_k_roles, ignore_roles_names)
+        self._video_role_analyzer = VideoRolesAnalyzer(imdb_id.strip('t'), use_top_k_roles, ignore_roles_names)
 
         subtitle_srt_path = subtitle_info_dict[SUBTITLE_PATH]
         self._subs_entities_timeline_dict = self.create_video_roles_timeline(subtitle_srt_path)
@@ -42,7 +42,7 @@ class SubtitleAnalyzer(object):
         return subs_entities_timeline_dict
 
     def get_subtitles_entities_links(self, timelaps_seconds):
-        secs = self._subs_entities_timeline_dict.keys()
+        secs = list(self._subs_entities_timeline_dict.keys())
         secs.sort()
         edges = []
         for i in range(len(secs)):
@@ -74,6 +74,6 @@ class SubtitleAnalyzer(object):
 if __name__ == "__main__":
     movie = SubtitleFetcher.get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)
-    d = sf.fetch_subtitle("/home/graphlab/temp")
+    d = sf.fetch_subtitle("../temp")
     sa = SubtitleAnalyzer(d)
     print(sa.get_subtitles_entities_links(60))

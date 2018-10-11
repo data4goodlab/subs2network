@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Tests for `subs_grpah` package."""
+"""Tests for `subs2grpah` package."""
 
 import pytest
 
 
-from subs_grpah import subs_grpah
+from subs2grpah import subs_grpah
 
 
 @pytest.fixture

@@ -1,9 +1,10 @@
 from imdb import IMDb
 from imdb.utils import RolesList
-from subs_grpah.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
+from subs2grpah.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
 import re
 import stop_words
 import logging
+from itertools import permutations
 
 
 class VideoRolesAnalyzer(object):
@@ -74,7 +75,8 @@ class VideoRolesAnalyzer(object):
 
             if name_part not in self._roles_dict:
                 self._roles_dict[name_part] = set()
-            self._roles_dict[name_part].add((person, role))
+            self._roles_dict[name_part].add(role_name.lower())
+            # (person, role)
 
     def find_roles_names_in_text(self, txt):
         """
@@ -86,11 +88,21 @@ class VideoRolesAnalyzer(object):
         s = "(%s)" % "|".join([r"\b%s\b" % r for r in self._roles_dict.keys()])
 
         matched_roles = set()
-        for r in re.findall(s, txt):
-            if r not in self._roles_dict or len(self._roles_dict[r]) > 1:
+        roles_in_text = re.findall(s, txt)
+        for r in roles_in_text:
+            if r not in self._roles_dict:
                 print(f"Warning: Skipping role {r} -- several roles options")
                 continue
-            matched_roles.add(list(self._roles_dict[r])[0])
+            if len(self._roles_dict[r]) == 1:
+                matched_roles.add(list(self._roles_dict[r])[0])
+            else:
+                if r in self._roles_dict[r]:
+                    matched_roles.add(r)
+                    continue
+                for fr in permutations(roles_in_text, 2):
+                    fr = " ".join(fr)
+                    if fr in self._roles_dict[r]:
+                        matched_roles.add(fr)
         return matched_roles
 
     def rating(self):

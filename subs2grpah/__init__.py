@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Top-level package for subs_grpah."""
+"""Top-level package for subs2grpah."""
 
 __author__ = """Dima Kagan"""
 __email__ = 'kagandi@post.bgu.ac.il'

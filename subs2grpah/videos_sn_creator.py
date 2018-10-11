@@ -1,11 +1,11 @@
-from subs_grpah.video_datasets_creator import VideoDatasetsCreator
+from subs2grpah.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
-from subs_grpah.consts import EPISODE_NAME, EPISODE_ID, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, ACTORS_GRAPH, \
+from subs2grpah.consts import EPISODE_NAME, EPISODE_ID, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, ACTORS_GRAPH, \
     MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
 import networkx as nx
-from subs_grpah.subtitle_fetcher import SubtitleFetcher
-from subs_grpah.subtitle_analyzer import SubtitleAnalyzer
-from subs_grpah.video_sn_analyzer import VideoSnAnalyzer
+from subs2grpah.subtitle_fetcher import SubtitleFetcher
+from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
+from subs2grpah.video_sn_analyzer import VideoSnAnalyzer
 from collections import Counter
 import matplotlib.pyplot as plt
 import os

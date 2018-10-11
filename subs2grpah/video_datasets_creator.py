@@ -1,6 +1,6 @@
 from xml.dom.minidom import parseString
-import urllib2
-from subs_grpah.consts import EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE, \
+from urllib.request import urlopen
+from subs2grpah.consts import EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE, \
     EPISODE_GUEST_STARTS, SERIES_ID, SEASON_ID, SEASON_NUMBER, DVD_SEASON, SERIES_NAME, TEMP_PATH, THE_TVDB_URL
 import logging
 import os
@@ -32,7 +32,7 @@ class VideoDatasetsCreator(object):
         if os.path.isfile(xml_path):
             s = file(xml_path).read()
         else:
-            u = urllib2.urlopen(THE_TVDB_URL % s_id, timeout=90)
+            u = urlopen(THE_TVDB_URL % s_id, timeout=90)
             s = u.read()
             file(xml_path, "w").write(s)
         doc = parseString(s)

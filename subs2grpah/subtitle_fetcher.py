@@ -1,10 +1,11 @@
 import os
-from subs_grpah.consts import IMDB_ID, VIDEO_NAME
-from subliminal import video, download_best_subtitles
+from subs2grpah.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH
+from subliminal import video, download_best_subtitles, save_subtitles, region
 import babelfish
 import logging
-import cPickle
+import pickle
 
+region.configure('dogpile.cache.dbm', arguments={'filename': '../temp/cachefile.dbm'})
 
 class SubtitleFetcher(object):
     """
@@ -36,10 +37,13 @@ class SubtitleFetcher(object):
             logging.debug("Fetching  %s's best matched subtitle" % self.get_video_string())
             # This download the best subtitle as SRT file to the current directory
             subtitle = download_best_subtitles({self._video_obj}, {self._lang},
-                                               hearing_impaired=False).values()[0][0]
-            self._save_subtitle_info_dict(subtitle, path)
+                                               hearing_impaired=False)
+            subtitle = subtitle[self._video_obj]
+            save_subtitles(self._video_obj, subtitle, encoding='utf-8')
+            self._save_subtitle_info_dict(subtitle[0], path)
         logging.debug("Loading %s metadata from %s" % (self.get_video_string(), p))
-        return cPickle.load(file(p, "rb"))  # test if the subtitle object is loadable
+        with open(p, "rb") as f:
+            return pickle.load(f)  # test if the subtitle object is loadable
 
     def _get_subtitle_srt_path(self, search_path):
         """
@@ -62,7 +66,7 @@ class SubtitleFetcher(object):
 
     def _save_subtitle_info_dict(self, subtitle_obj, path):
         """
-        save subtitle's metadata as a dict object to a file using cPickle
+        save subtitle's metadata as a dict object to a file using pickle
         :param subtitle_obj: dict with the subtitle's metadata that include the video's name, IMDB score, and
             downloaded subtitle's path
         :param path: the path to save the subtitle's metadata dict using cPcikle
@@ -72,7 +76,8 @@ class SubtitleFetcher(object):
         d = {VIDEO_NAME: subtitle_obj.movie_name, IMDB_ID: subtitle_obj.movie_imdb_id,
              SUBTITLE_PATH: self._get_subtitle_srt_path(path)}
         logging.debug("Saving %s's metadata to %s" % (self.get_video_string(), p))
-        cPickle.dump(d, file(p, "wb"))
+        with open(p, "wb") as f:
+            pickle.dump(d, f)
 
     def get_video_string(self):
         """
@@ -169,4 +174,4 @@ class SubtitleFetcher(object):
 if __name__ == "__main__":
     movie = SubtitleFetcher.get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)
-    sf.fetch_subtitle("/home/graphlab/temp")
+    sf.fetch_subtitle("../temp")

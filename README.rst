@@ -1,13 +1,13 @@
 ==========
-subs_grpah
+subs2graph
 ==========
 
 
-.. image:: https://img.shields.io/pypi/v/subs_grpah.svg
-        :target: https://pypi.python.org/pypi/subs_grpah
+.. image:: https://img.shields.io/pypi/v/subs2graph.svg
+        :target: https://pypi.python.org/pypi/subs2graph
 
-.. image:: https://img.shields.io/travis/kagandi/subs_grpah.svg
-        :target: https://travis-ci.org/kagandi/subs_grpah
+.. image:: https://img.shields.io/travis/kagandi/subs2graph.svg
+        :target: https://travis-ci.org/kagandi/subs2graph
 
 .. image:: https://readthedocs.org/projects/subs-grpah/badge/?version=latest
         :target: https://subs-grpah.readthedocs.io/en/latest/?badge=latest
