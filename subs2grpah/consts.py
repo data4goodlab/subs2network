@@ -1,6 +1,6 @@
 IMDB_CAST = "cast"
 IMDB_NAME = "name"
-MIN_NAME_SIZE = 3
+MIN_NAME_SIZE = 2
 SRC_ID = "src_id"
 DST_ID = "dst_id"
 WEIGHT = "weight"
@@ -25,6 +25,6 @@ SUBTITLE_PATH = "subtitle_path"
 MOVIE_YEAR = "movie_year"
 ROLES_GRAPH = "roles_graph"
 ACTORS_GRAPH = "actors_graph"
-MAX_YEAR = 2014
+MAX_YEAR = 2008
 TEMP_PATH = "/home/graphlab/temp"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"

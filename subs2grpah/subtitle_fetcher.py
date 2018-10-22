@@ -4,6 +4,9 @@ from subliminal import video, download_best_subtitles, save_subtitles, region
 import babelfish
 import logging
 import pickle
+from subs2grpah.exceptions import SubtitleNotFound
+from guessit.api import  GuessitException
+
 
 region.configure('dogpile.cache.dbm', arguments={'filename': '../temp/cachefile.dbm'})
 
@@ -31,18 +34,25 @@ class SubtitleFetcher(object):
         :return:
         :rtype: dict
         """
-        os.chdir(path)
+        # owd = os.getcwd()
+        # os.chdir(path)
         p = path + os.path.sep + self.get_video_string() + ".pkl"
         if not os.path.isfile(p):
             logging.debug("Fetching  %s's best matched subtitle" % self.get_video_string())
             # This download the best subtitle as SRT file to the current directory
-            subtitle = download_best_subtitles({self._video_obj}, {self._lang},
-                                               hearing_impaired=False)
-            subtitle = subtitle[self._video_obj]
-            save_subtitles(self._video_obj, subtitle, encoding='utf-8')
+            try:
+                subtitle = download_best_subtitles({self._video_obj}, {self._lang},
+                                                   hearing_impaired=True)
+                subtitle = subtitle[self._video_obj]
+            except GuessitException:
+                subtitle = []
+            if not subtitle:
+                raise SubtitleNotFound
+            save_subtitles(self._video_obj, subtitle, encoding='utf-8', directory=path)
             self._save_subtitle_info_dict(subtitle[0], path)
         logging.debug("Loading %s metadata from %s" % (self.get_video_string(), p))
         with open(p, "rb") as f:
+            # os.chdir(owd)
             return pickle.load(f)  # test if the subtitle object is loadable
 
     def _get_subtitle_srt_path(self, search_path):

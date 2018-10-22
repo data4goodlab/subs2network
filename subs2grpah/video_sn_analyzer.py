@@ -6,10 +6,10 @@ import os
 import logging
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
 from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
-
+import matplotlib.pyplot as plt
 
 class VideoSnAnalyzer(object):
-    def __init__(self, video_name, entities_links_dict, video_rating):
+    def __init__(self, video_name, entities_links_dict, video_rating=0):
         self._entities_dict = entities_links_dict
         self._video_name = video_name
         self._video_rating = video_rating
@@ -22,7 +22,7 @@ class VideoSnAnalyzer(object):
 
     def construct_social_network_graph(self, graph_type=ROLES_GRAPH, min_weight=2):
         if graph_type == ROLES_GRAPH:
-            entity_func = self._temp_func  # lambda n: n[1].get("name")
+            entity_func = lambda n: n[1].get("name")  # lambda n: n[1].get("name")
         elif graph_type == ACTORS_GRAPH:
             entity_func = lambda n: n[0].get("name")  # Create actors graph
         else:
@@ -30,7 +30,7 @@ class VideoSnAnalyzer(object):
 
         g = nx.Graph()
 
-        for e, w in self._entities_dict.iteritems():
+        for e, w in self._entities_dict.items():
             if w < min_weight:
                 continue
             g.add_edge(entity_func(e[0]), entity_func(e[1]), weight=w)
@@ -51,10 +51,10 @@ class VideoSnAnalyzer(object):
         d.update(add_prefix_to_dict_keys(VideoSnAnalyzer.get_nodes_average_weights(g), "avg-weight"))
 
         if calculate_edges_features:
-            for e in g.edges():
-                d["%s_%s_weight" % (e[0], e[1])] = g.edge[e[0]][e[1]]["weight"]
+            for v, u in g.edges():
+                d[f"{v}_{u}_weight"] = g.adj[v][u]["weight"]
         edge_weights = nx.get_edge_attributes(g, "weight")
-        d["average_edge_weight"] = np.average(edge_weights.values())
+        d["average_edge_weight"] = np.average(list(edge_weights.values()))
         d["max_edge_weight"] = max(edge_weights.values())
         if VIDEO_NAME in g.graph:
             d[VIDEO_NAME] = g.graph[VIDEO_NAME]
@@ -71,7 +71,7 @@ class VideoSnAnalyzer(object):
         for u in g.nodes():
             w = []
             for v in g.neighbors(u):
-                w.append(g.edge[u][v]["weight"])
+                w.append(g.adj[u][v]["weight"])
             d[u] = np.average(w)
         return d
 
@@ -79,18 +79,32 @@ class VideoSnAnalyzer(object):
     def video_rating(self):
         return self._video_rating
 
+    def draw_graph(self, g, outpath, graph_layout=nx.spring_layout):
+
+        pos = graph_layout(g)
+        plt.figure(num=None, figsize=(15, 15), dpi=150)
+        plt.axis('off')
+        edge_labels = dict([((u, v,), d['weight'])
+                            for u, v, d in g.edges(data=True)])
+
+        nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels)
+
+        nx.draw(g, pos, node_size=500, edge_cmap=plt.cm.Reds, with_labels=True)
+        plt.savefig(outpath)
+        plt.close()
+
 
 if __name__ == "__main__":
     video_name = "The Godfather"
     movie = SubtitleFetcher.get_movie_obj(video_name, "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)
-    d = sf.fetch_subtitle("/home/graphlab/temp")
-    sa = SubtitleAnalyzer(d, use_top_k_roles=10)
+    d = sf.fetch_subtitle("../temp")
+    sa = SubtitleAnalyzer(d, use_top_k_roles=20)
     e = sa.get_subtitles_entities_links(60)
     va = VideoSnAnalyzer(video_name, e)
-    g = va.construct_social_network_graph(lambda n: n[1].get("name"))
-    va.draw_graph(g, "The GodFather", None, None, "/home/graphlab/temp/%s Roles.png" % video_name)
-    g = va.construct_social_network_graph(lambda n: n[0].get("name"))
-    va.draw_graph(g, "The GodFather", None, None, "/home/graphlab/temp/%s Players.png" % video_name)
+    g = va.construct_social_network_graph(ROLES_GRAPH)
+    va.draw_graph(g, f"../temp/{video_name} Roles.png")
+    g = va.construct_social_network_graph(ACTORS_GRAPH)
+    va.draw_graph(g, f"../temp/{video_name} Players.png")
     print(nx.info(g))
     print(va.get_features_dict(g))

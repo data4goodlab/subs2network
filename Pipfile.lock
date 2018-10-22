@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "9787359117d9fbd49abe59c4de2738c5d8bf399bed32230ac7d348d8478dd750"
+            "sha256": "f7474ab5d6483a6716019129469a3f29730d69cbf67fc77f8190247f22182e23"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -104,6 +104,14 @@
         },
         "f2dca02": {
             "file": "https://github.com/Diaoul/subliminal/archive/develop.zip"
+        },
+        "fuzzywuzzy": {
+            "hashes": [
+                "sha256:5ac7c0b3f4658d2743aa17da53a55598144edbc5bee3c6863840636e6926f254",
+                "sha256:6f49de47db00e1c71d40ad16da42284ac357936fa9b66bea1df63fed07122d62"
+            ],
+            "index": "pypi",
+            "version": "==0.17.0"
         },
         "graphviz": {
             "hashes": [
@@ -246,6 +254,13 @@
             ],
             "index": "pypi",
             "version": "==2.2"
+        },
+        "nltk": {
+            "hashes": [
+                "sha256:fe0eda251be65843be86d7de9abfbf7161732256f742e623b21243ec47bdb718"
+            ],
+            "index": "pypi",
+            "version": "==3.3.0"
         },
         "numpy": {
             "hashes": [
@@ -396,6 +411,12 @@
             ],
             "version": "==2.7.3"
         },
+        "python-levenshtein": {
+            "hashes": [
+                "sha256:033a11de5e3d19ea25c9302d11224e1a1898fe5abd23c61c7c360c25195e3eb1"
+            ],
+            "version": "==0.12.0"
+        },
         "pytz": {
             "hashes": [
                 "sha256:a061aa0a9e06881eb8b3b2b43f05b9439d6583c206d0a6c340ff72a7b6669053",
@@ -411,9 +432,9 @@
         },
         "rebulk": {
             "hashes": [
-                "sha256:e0c69bdddccbba3ef881948ea96f1d62eda91201c306ea568a676507a30985eb"
+                "sha256:1d49e4f7ef6fb874e60efccacbbe661092fabdb7770cdf7f7de4516d50535998"
             ],
-            "version": "==0.9.0"
+            "version": "==1.0.0"
         },
         "requests": {
             "hashes": [
@@ -646,10 +667,10 @@
         },
         "py": {
             "hashes": [
-                "sha256:06a30435d058473046be836d3fc4f27167fd84c45b99704f2fb5509ef61f9af1",
-                "sha256:50402e9d1c9005d759426988a492e0edaadb7f4e68bcddfea586bc7432d009c6"
+                "sha256:bf92637198836372b520efcba9e020c330123be8ce527e535d185ed4b6f45694",
+                "sha256:e76826342cefe3c3d5f7e8ee4316b80d1dd8a300781612ddbc765c17ba25a6c6"
             ],
-            "version": "==1.6.0"
+            "version": "==1.7.0"
         },
         "pycodestyle": {
             "hashes": [

@@ -14,6 +14,10 @@ turicreate = "*"
 imdbpy = "*"
 stop-words = "*"
 "f2dca02" = {file = "https://github.com/Diaoul/subliminal/archive/develop.zip"}
+fuzzywuzzy = {extras = ["speedup"], version = "*"}
+nltk = "*"
+spacy = "*"
+nameparser = "*"
 
 [dev-packages]
 bumpversion = "==0.5.3"

@@ -4,7 +4,18 @@ from subs2grpah.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
 import re
 import stop_words
 import logging
-from itertools import permutations
+from itertools import permutations, combinations
+from fuzzywuzzy import fuzz
+from nltk.tag import StanfordNERTagger
+from nltk.tokenize import word_tokenize
+# from nltk import  ne_chunk
+# from nltk.tag import pos_tag
+from nltk.corpus import words
+from nltk.corpus import names
+from collections import defaultdict, Counter
+
+
+# import spacy
 
 
 class VideoRolesAnalyzer(object):
@@ -21,13 +32,19 @@ class VideoRolesAnalyzer(object):
 
         if ignore_roles_names is None:
             ignore_roles_names = []
-        self._roles_dict = {}
+        self._roles_dict = defaultdict(set)
         self._imdb = IMDb()
         self._imdb_id = imdb_id
         self._imdb_movie = self._imdb.get_movie(self._imdb_id)
-        self._stop_words_english = set(stop_words.get_stop_words("english"))
+        self._stop_words_english = set(stop_words.get_stop_words("english")) - set([n.lower() for n in names.words()])
         self._ignore_roles = set([n.lower() for n in ignore_roles_names])
+        self._use_top_k_roles = {}
         self._init_roles_dict(use_top_k_roles)
+        self._st = StanfordNERTagger(
+            '/home/dima/Documents/subs2graph/ner/classifiers/english.all.3class.distsim.crf.ser.gz',
+            encoding='utf-8', path_to_jar="/home/dima/Documents/subs2graph/ner/stanford-ner.jar")
+        # self._nlp = spacy.load('en_core_web_sm')
+
         # self._roles_dict["batman"] = [("Christian Bale", "Batman")]
 
     def _init_roles_dict(self, use_top_k_roles, remove_possessives=True):
@@ -69,14 +86,17 @@ class VideoRolesAnalyzer(object):
 
         if re_apost_name.match(n):
             n = re_apost_name.findall(n)[0]
-        for name_part in re_white_space.split(n):
+        # words_set = set(words.words()) - set([n.lower() for n in names.words()])
+        parts = re_white_space.split(n)
+        for name_part in parts:
             if name_part in self._stop_words_english or len(name_part) < MIN_NAME_SIZE:
-                continue
+                break
+            # if name_part in words_set and len(parts) > 1:
+            #     break
 
-            if name_part not in self._roles_dict:
-                self._roles_dict[name_part] = set()
-            self._roles_dict[name_part].add(role_name.lower())
-            # (person, role)
+            # if name_part not in self._roles_dict:
+            #     self._roles_dict[name_part] = set()
+            self._roles_dict[name_part].add((person, role))
 
     def find_roles_names_in_text(self, txt):
         """
@@ -84,26 +104,134 @@ class VideoRolesAnalyzer(object):
         :param txt: input text
         :return: set of matched roles in the text
         """
-        txt = txt.strip().lower()
-        s = "(%s)" % "|".join([r"\b%s\b" % r for r in self._roles_dict.keys()])
+        txt_raw = str(txt)
+        txt = txt.strip().lower().replace("\n", " ")
+        s = "(%s)" % "|".join([fr"\b{r}\b" for r in self._roles_dict.keys()])
 
         matched_roles = set()
-        roles_in_text = re.findall(s, txt)
+        roles_in_text = set(re.findall(s, txt))
+
         for r in roles_in_text:
             if r not in self._roles_dict:
                 print(f"Warning: Skipping role {r} -- several roles options")
                 continue
             if len(self._roles_dict[r]) == 1:
                 matched_roles.add(list(self._roles_dict[r])[0])
-            else:
-                if r in self._roles_dict[r]:
-                    matched_roles.add(r)
+                continue
+            for actor, role in self._roles_dict[r]:
+                if r == role[IMDB_NAME].lower():
+                    matched_roles.add((actor, role))
                     continue
-                for fr in permutations(roles_in_text, 2):
-                    fr = " ".join(fr)
-                    if fr in self._roles_dict[r]:
-                        matched_roles.add(fr)
+            for fr in combinations(roles_in_text, 2):
+                for actor, role in self._roles_dict[r]:
+                    if fuzz.token_set_ratio(role[IMDB_NAME], fr) > 95:
+                        matched_roles.add((actor, role))
+                        break
         return matched_roles
+
+    def find_roles_names_in_text_ner(self, stanford_ner, spacy_ner):
+        """
+        Find matched roles in the input text
+        :param txt: input text
+        :return: set of matched roles in the text
+        """
+        stanford_res = self.find_roles_names_in_text_stanford_ner(stanford_ner)
+        spacy_res = self.find_roles_names_in_text_spacy_ner(spacy_ner)
+        return stanford_res.union(spacy_res)
+
+    def find_roles_names_in_text_spacy_ner(self, classified_text):
+        """
+        Find matched roles in the input text
+        :param txt: input text
+        :return: set of matched roles in the text
+        """
+        matched_roles = set()
+
+        for p, ent_type in classified_text:
+            if ent_type == "PERSON":
+                p = p.lower().split()
+                for r in p:
+                    if r not in self._roles_dict:
+                        print(f"Warning: Skipping role {r} -- not in imdb")
+                        continue
+                    if len(self._roles_dict[r]) == 1:
+                        matched_roles.add(list(self._roles_dict[r])[0])
+                        continue
+                    for actor, role in self._roles_dict[r]:
+                        if r == role[IMDB_NAME].lower():
+                            matched_roles.add((actor, role))
+                            continue
+                    for fr in combinations(p, 2):
+                        for actor, role in self._roles_dict[r]:
+                            if fuzz.token_set_ratio(role[IMDB_NAME], fr) > 95:
+                                matched_roles.add((actor, role))
+                                break
+
+        return matched_roles
+
+    def find_roles_names_in_text_stanford_ner(self, classified_text):
+        """
+        Find matched roles in the input text
+        :param txt: input text
+        :return: set of matched roles in the text
+        """
+        matched_roles = set()
+        prev_person = []
+
+        for r, ent_type in classified_text:
+            if ent_type == "PERSON":
+                r = r.lower()
+                prev_person.append(r)
+
+                if r not in self._roles_dict:
+                    print(f"Warning: Skipping role {r} -- not in imdb")
+                    continue
+                if len(self._roles_dict[r]) == 1:
+                    matched_roles.add(list(self._roles_dict[r])[0])
+                    continue
+                for actor, role in self._roles_dict[r]:
+                    if r == role[IMDB_NAME].lower():
+                        matched_roles.add((actor, role))
+                        continue
+                for fr in combinations(prev_person, 2):
+                    for actor, role in self._roles_dict[r]:
+                        if fuzz.token_set_ratio(role[IMDB_NAME], fr) > 95:
+                            matched_roles.add((actor, role))
+                            break
+            else:
+                prev_person = []
+        return matched_roles
+
+    def count_apperence_in_text(self, classified_text):
+        """
+        Find matched roles in the input text
+        :param txt: input text
+        :return: set of matched roles in the text
+        """
+        prev_person = []
+        role_counter = Counter()
+        for r, ent_type in classified_text:
+            if ent_type == "PERSON":
+                r = r.lower()
+                prev_person.append(r)
+
+                if r not in self._roles_dict:
+                    continue
+                if len(self._roles_dict[r]) == 1:
+                    role_counter[list(self._roles_dict[r])[0][1][IMDB_NAME]] += 1
+                    continue
+                for actor, role in self._roles_dict[r]:
+                    if r == role[IMDB_NAME].lower():
+                        role_counter[role[IMDB_NAME]] += 1
+                        continue
+                for fr in combinations(prev_person, 2):
+                    for actor, role in self._roles_dict[r]:
+                        if fuzz.token_set_ratio(role[IMDB_NAME], fr) > 95:
+                            role_counter[role[IMDB_NAME]] += 1
+                            break
+            else:
+                prev_person = []
+        return role_counter
 
     def rating(self):
         """

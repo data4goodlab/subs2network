@@ -4,7 +4,10 @@ from collections import Counter
 from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH
 import logging
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
-
+from nltk.tag import StanfordNERTagger
+from nltk.tokenize import word_tokenize
+from subs2grpah.exceptions import SubtitleNotFound
+import spacy
 
 class SubtitleAnalyzer(object):
     """
@@ -30,11 +33,30 @@ class SubtitleAnalyzer(object):
 
     def create_video_roles_timeline(self, subtitle_path):
         if subtitle_path is None:
-            raise Exception("Could not find video's subtitle in path" % subtitle_path)
+            raise SubtitleNotFound(f"Could not find video's subtitle in path: {subtitle_path}")
         subs = pysrt.open(subtitle_path)
         subs_entities_timeline_dict = {}
-        for s in subs:
-            roles = self._video_role_analyzer.find_roles_names_in_text(s.text)
+
+        # import re
+        # re_words_split = re.compile("(\w+)")
+        # print(re_words_split.findall(subs[0].text))
+        #
+        subs_clean = [s.text.strip('-\\\/').replace("\n", " ") for s in subs]
+        subs_text = [word_tokenize(s) for s in subs_clean]
+        st = StanfordNERTagger(
+            '/home/dima/Documents/subs2graph/ner/classifiers/english.all.3class.distsim.crf.ser.gz',
+            encoding='utf-8', path_to_jar="/home/dima/Documents/subs2graph/ner/stanford-ner.jar")
+
+        nlp = spacy.load('en_core_web_sm',disable=['parser', 'tagger', 'textcat'])
+        entities_spacy = [[(ent.text, ent.label_) for ent in nlp(s).ents] for s in subs_clean]
+
+        entities_nltk = st.tag_sents(subs_text)
+        # role_counter = Counter()
+        # for e in entities:
+        #     role_counter += self._video_role_analyzer.count_apperence_in_text(e)
+        for s, e_n, e_s in zip(subs, entities_nltk, entities_spacy):
+            roles = self._video_role_analyzer.find_roles_names_in_text_ner(e_n, e_s)
+            # role_counter.update(roles)
             if len(roles) > 0:
                 t = s.start.seconds + s.start.minutes * 60
                 subs_entities_timeline_dict[t] = roles
@@ -59,7 +81,7 @@ class SubtitleAnalyzer(object):
         edges = []
         for v1 in l1:
             for v2 in l2:
-                if v1 == v2:
+                if str(v1[1]) == str(v2[1]):
                     continue
                 if v1 > v2:
                     v1, v2 = v2, v1
