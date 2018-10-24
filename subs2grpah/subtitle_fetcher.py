@@ -1,6 +1,6 @@
 import os
 from subs2grpah.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH
-from subliminal import video, download_best_subtitles, save_subtitles, region
+from subliminal import video, download_best_subtitles, save_subtitles, region, subtitle
 import babelfish
 import logging
 import pickle
@@ -85,7 +85,7 @@ class SubtitleFetcher(object):
         p = path + os.path.sep + self.get_video_string() + ".pkl"
         d = {VIDEO_NAME: subtitle_obj.movie_name, IMDB_ID: subtitle_obj.movie_imdb_id,
              SUBTITLE_PATH: self._get_subtitle_srt_path(path)}
-        logging.debug("Saving %s's metadata to %s" % (self.get_video_string(), p))
+        logging.debug(f"Saving {self.get_video_string()}'s metadata to {p}")
         with open(p, "wb") as f:
             pickle.dump(d, f)
 
@@ -182,6 +182,6 @@ class SubtitleFetcher(object):
 
 
 if __name__ == "__main__":
-    movie = SubtitleFetcher.get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
+    movie = SubtitleFetcher.get_movie_obj("Kill Bill: Vol 2", "Kill Bill: Vol. 2", 2004, "0378194")
     sf = SubtitleFetcher(movie)
     sf.fetch_subtitle("../temp")

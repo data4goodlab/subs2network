@@ -6,7 +6,6 @@
 import pytest
 
 
-from subs2grpah import subs_grpah
 
 
 @pytest.fixture

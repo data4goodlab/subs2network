@@ -2,7 +2,6 @@ from subs2grpah.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
 from subs2grpah.consts import EPISODE_NAME, EPISODE_ID, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, ACTORS_GRAPH, \
     MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
-import networkx as nx
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
 from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
 from subs2grpah.video_sn_analyzer import VideoSnAnalyzer
@@ -52,7 +51,7 @@ class VideosSnCreator(object):
                 continue
             if movies_number is not None and len(graphs_list) >= movies_number:
                 break
-            movie_name = f"{title} ({year})"
+            movie_name = f"{title.replace('.','').replace('/','')} ({year})"
             try:
                 g = self.get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
                                          timeelaps_seconds=timeelaps_seconds, graph_type=graph_type,
@@ -227,13 +226,13 @@ class VideosSnCreator(object):
             with open(outpath, "w") as f:
                 f.write("\n".join(csv_lines))
 
-    def get_unintresting_features_names(self, features_dicts):
+    def get_unintresting_features_names(self, features_dicts, min_freq=5):
         features_names = []
 
         for d in features_dicts:
             features_names += d.keys()
         c = Counter(features_names)
-        return [k for k in c.keys() if c[k] < 5]
+        return [k for k in c.keys() if c[k] < min_freq]
 
 
 def create_dirs(t, name):
@@ -271,18 +270,15 @@ def test_get_director_movies(name):
 
 
 def save_output(graphs, v, type, name):
+
+    joined_grpah = nx.compose_all(graphs)
+    joined_grpah.graph[VIDEO_NAME] = name
+    joined_grpah.graph["movie_year"] = MAX_YEAR
+    graphs = [joined_grpah, *graphs]
     v.save_graphs_features(graphs, f"../temp/{type}/{name}/{name} features.tsv", True)
     v.save_graphs_to_csv(graphs, f"../temp/{type}/{name}/csv")
     v.draw_graphs(graphs, f"../temp/{type}/{name}/graphs")
     v.save_graphs_to_json(graphs, f"../temp/{type}/{name}/json")
-    joined_grpah = nx.compose_all(graphs)
-    joined_grpah.graph[VIDEO_NAME] = "joined"
-    joined_grpah.graph["movie_year"] = MAX_YEAR
-    v.save_graphs_features([joined_grpah], f"../temp/{type}/{name}/{name} - joined - features.tsv", True)
-    v.save_graphs_to_csv([joined_grpah], f"../temp/{type}/{name}/csv")
-    v.draw_graphs([joined_grpah], f"../temp/{type}/{name}/graphs")
-    v.save_graphs_to_json([joined_grpah], f"../temp/{type}/{name}/json")
-
 
 def save_graphs_outputs(graphs, v, name):
     v.save_graphs_features(graphs, f"../temp/actors/{name}/{name} features.tsv", True)
@@ -303,9 +299,9 @@ def test_get_movie(movie_title, year, imdb_id):
 
 if __name__ == "__main__":
     # test_get_movie("The Dark Knight",2008, "0468569")
-    # test_get_series("The Simpsons", "71663",set(range(20,22)), set(range(1,25)))
-    test_get_director_movies("Quentin Tarantino")
-    # test_get_actor_movies("Adam Sandler")
+    test_get_series("Daredevil", "3322312",set(range(3,4)), set(range(1,14)))
+    # test_get_director_movies("Quentin Tarantino")
+    # test_get_actor_movies("Brendan Fraser")
     # v = VideosSnCreator()
     # name = "Modern Family"
     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,

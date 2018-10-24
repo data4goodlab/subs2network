@@ -8,6 +8,24 @@ from nltk.tag import StanfordNERTagger
 from nltk.tokenize import word_tokenize
 from subs2grpah.exceptions import SubtitleNotFound
 import spacy
+import unicodedata, re
+from itertools import chain
+
+
+class RemoveControlChars(object):
+
+    def __init__(self):
+
+        all_chars = (chr(i) for i in range(0x110000))
+        control_chars = ''.join(c for c in all_chars if unicodedata.category(c) == 'Cc')
+        # or equivalently and much more efficiently
+        control_chars = ''.join(map(chr, chain(range(0, 32), range(127, 160))))
+
+        self.control_char_re = re.compile('[%s]' % re.escape(control_chars))
+
+    def remove_control_chars(self, s):
+        return self.control_char_re.sub('', s)
+
 
 class SubtitleAnalyzer(object):
     """
@@ -37,25 +55,26 @@ class SubtitleAnalyzer(object):
         subs = pysrt.open(subtitle_path)
         subs_entities_timeline_dict = {}
 
-        # import re
-        # re_words_split = re.compile("(\w+)")
-        # print(re_words_split.findall(subs[0].text))
-        #
-        subs_clean = [s.text.strip('-\\\/').replace("\n", " ") for s in subs]
+        re_brackets_split = re.compile("\[(.*?)\]")
+
+        cc = RemoveControlChars()
+        subs_clean = [cc.remove_control_chars(s.text.strip('-\\\/').replace("\n", " ")) for s in subs]
+        brackets = [re_brackets_split.findall(s) for s in subs_clean]
         subs_text = [word_tokenize(s) for s in subs_clean]
         st = StanfordNERTagger(
             '/home/dima/Documents/subs2graph/ner/classifiers/english.all.3class.distsim.crf.ser.gz',
             encoding='utf-8', path_to_jar="/home/dima/Documents/subs2graph/ner/stanford-ner.jar")
 
-        nlp = spacy.load('en_core_web_sm',disable=['parser', 'tagger', 'textcat'])
+        nlp = spacy.load('en_core_web_sm', disable=['parser', 'tagger', 'textcat'])
         entities_spacy = [[(ent.text, ent.label_) for ent in nlp(s).ents] for s in subs_clean]
 
         entities_nltk = st.tag_sents(subs_text)
         # role_counter = Counter()
         # for e in entities:
         #     role_counter += self._video_role_analyzer.count_apperence_in_text(e)
-        for s, e_n, e_s in zip(subs, entities_nltk, entities_spacy):
+        for s, e_n, e_s, b in zip(subs, entities_nltk, entities_spacy, brackets):
             roles = self._video_role_analyzer.find_roles_names_in_text_ner(e_n, e_s)
+            roles.update(self._video_role_analyzer.find_roles_names_in_text(b))
             # role_counter.update(roles)
             if len(roles) > 0:
                 t = s.start.seconds + s.start.minutes * 60

@@ -95,8 +95,8 @@ class VideoSnAnalyzer(object):
 
 
 if __name__ == "__main__":
-    video_name = "The Godfather"
-    movie = SubtitleFetcher.get_movie_obj(video_name, "The Godfather", 1972, "0068646")
+    video_name = "The Mummy"
+    movie = SubtitleFetcher.get_movie_obj(video_name, "The Mummy", 1999, "0120616")
     sf = SubtitleFetcher(movie)
     d = sf.fetch_subtitle("../temp")
     sa = SubtitleAnalyzer(d, use_top_k_roles=20)

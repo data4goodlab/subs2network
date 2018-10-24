@@ -40,12 +40,8 @@ class VideoRolesAnalyzer(object):
         self._ignore_roles = set([n.lower() for n in ignore_roles_names])
         self._use_top_k_roles = {}
         self._init_roles_dict(use_top_k_roles)
-        self._st = StanfordNERTagger(
-            '/home/dima/Documents/subs2graph/ner/classifiers/english.all.3class.distsim.crf.ser.gz',
-            encoding='utf-8', path_to_jar="/home/dima/Documents/subs2graph/ner/stanford-ner.jar")
-        # self._nlp = spacy.load('en_core_web_sm')
 
-        # self._roles_dict["batman"] = [("Christian Bale", "Batman")]
+
 
     def _init_roles_dict(self, use_top_k_roles, remove_possessives=True):
         """
@@ -81,16 +77,20 @@ class VideoRolesAnalyzer(object):
     def _add_role_to_roles_dict(self, person, role):
         role_name = role[IMDB_NAME]
         n = str(role_name).strip().lower().replace('"', '')
-        re_white_space = re.compile(r"\s+")
+        re_white_space = re.compile(r"\b([\w-].*?)\b")
         re_apost_name = re.compile(r"^'(.*?)'$")
+        re_split = re.compile(r"([\w-].*?)")
 
         if re_apost_name.match(n):
             n = re_apost_name.findall(n)[0]
         # words_set = set(words.words()) - set([n.lower() for n in names.words()])
-        parts = re_white_space.split(n)
+        parts = re_white_space.findall(n)
         for name_part in parts:
             if name_part in self._stop_words_english or len(name_part) < MIN_NAME_SIZE:
-                break
+                continue
+            for part in name_part.split("-"):
+                if part not in self._stop_words_english or len(part)> MIN_NAME_SIZE:
+                    self._roles_dict[part].add((person, role))
             # if name_part in words_set and len(parts) > 1:
             #     break
 
@@ -104,11 +104,13 @@ class VideoRolesAnalyzer(object):
         :param txt: input text
         :return: set of matched roles in the text
         """
-        txt_raw = str(txt)
-        txt = txt.strip().lower().replace("\n", " ")
+        matched_roles = set()
+        if not txt:
+            return matched_roles
+
+        txt = txt[0].strip().lower()
         s = "(%s)" % "|".join([fr"\b{r}\b" for r in self._roles_dict.keys()])
 
-        matched_roles = set()
         roles_in_text = set(re.findall(s, txt))
 
         for r in roles_in_text:
@@ -148,7 +150,7 @@ class VideoRolesAnalyzer(object):
         matched_roles = set()
 
         for p, ent_type in classified_text:
-            if ent_type == "PERSON":
+            if ent_type in {"PERSON", "ORG"}:
                 p = p.lower().split()
                 for r in p:
                     if r not in self._roles_dict:
@@ -179,7 +181,7 @@ class VideoRolesAnalyzer(object):
         prev_person = []
 
         for r, ent_type in classified_text:
-            if ent_type == "PERSON":
+            if ent_type in {"PERSON", "ORG"}:
                 r = r.lower()
                 prev_person.append(r)
 
