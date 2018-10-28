@@ -1,14 +1,14 @@
 import os
-from subs2grpah.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH
+from subs2grpah.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH, ROLES_PATH
 from subliminal import video, download_best_subtitles, save_subtitles, region, subtitle
 import babelfish
 import logging
 import pickle
 from subs2grpah.exceptions import SubtitleNotFound
-from guessit.api import  GuessitException
-
+from guessit.api import GuessitException
 
 region.configure('dogpile.cache.dbm', arguments={'filename': '../temp/cachefile.dbm'})
+
 
 class SubtitleFetcher(object):
     """
@@ -83,8 +83,14 @@ class SubtitleFetcher(object):
         """
 
         p = path + os.path.sep + self.get_video_string() + ".pkl"
-        d = {VIDEO_NAME: subtitle_obj.movie_name, IMDB_ID: subtitle_obj.movie_imdb_id,
-             SUBTITLE_PATH: self._get_subtitle_srt_path(path)}
+        roles_path = path + os.path.sep + self.get_video_string() + "roles.pkl"
+        try:
+            d = {VIDEO_NAME: subtitle_obj.movie_name, IMDB_ID: subtitle_obj.movie_imdb_id,
+                 SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH:roles_path }
+        except AttributeError:
+            d = {VIDEO_NAME: f"{subtitle_obj.title}S{subtitle_obj.season}E{subtitle_obj.episode}", IMDB_ID: self._video_obj.series_imdb_id,
+                 SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH:roles_path}
+
         logging.debug(f"Saving {self.get_video_string()}'s metadata to {p}")
         with open(p, "wb") as f:
             pickle.dump(d, f)
@@ -96,7 +102,7 @@ class SubtitleFetcher(object):
         :rtype: str
         """
         if self.is_episode:
-            return "%s %s" % (self._video_obj.series, self.episode_details_strings()[1])
+            return f"{self._video_obj.series} {self.episode_details_strings()[1]}"
         if self.is_movie:
             return self._video_obj.name
         raise Exception("Unsuportted video type")
@@ -164,7 +170,7 @@ class SubtitleFetcher(object):
         return video.Movie(name=name, title=title, year=year, imdb_id=imdb_id)
 
     @staticmethod
-    def get_episode_obj(video_name, series, season_num, episode_num, episode_name, tvdb_id):
+    def get_episode_obj(video_name, series, season_num, episode_num, episode_name, imdb_id):
         """
         Returns a subliminal TV episode object according to the episode's details
         :param video_name: the episode name, which usually consists of the series name and episode details
@@ -176,9 +182,9 @@ class SubtitleFetcher(object):
         :return: video.Episode object
         :rtype: video.Episode
         """
-        logging.info("Fetching Subtitle Series:%s | Season: %s | Episode Number: %s | Name: %s, |ID: %s " % (
-            series, season_num, episode_num, episode_name, tvdb_id))
-        return video.Episode(video_name, series, season_num, episode_num, title=episode_name, tvdb_id=tvdb_id)
+        logging.info("Fetching Subtitle Series:%s | Season: %s | Episode Number: %s | Name: %s" % (
+            series, season_num, episode_num, episode_name))
+        return video.Episode(video_name, series, season_num, episode_num, title=episode_name, series_imdb_id=imdb_id)
 
 
 if __name__ == "__main__":

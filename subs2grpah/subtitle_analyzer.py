@@ -1,7 +1,7 @@
 from subs2grpah.video_roles_analyzer import VideoRolesAnalyzer
 import pysrt
 from collections import Counter
-from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH
+from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH
 import logging
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
 from nltk.tag import StanfordNERTagger
@@ -15,7 +15,6 @@ from itertools import chain
 class RemoveControlChars(object):
 
     def __init__(self):
-
         all_chars = (chr(i) for i in range(0x110000))
         control_chars = ''.join(c for c in all_chars if unicodedata.category(c) == 'Cc')
         # or equivalently and much more efficiently
@@ -44,9 +43,11 @@ class SubtitleAnalyzer(object):
         if ignore_roles_names is None:
             ignore_roles_names = []
         imdb_id = subtitle_info_dict[IMDB_ID]
-        self._video_role_analyzer = VideoRolesAnalyzer(imdb_id.strip('t'), use_top_k_roles, ignore_roles_names)
+        self._video_role_analyzer = VideoRolesAnalyzer(imdb_id.strip('t'), use_top_k_roles, ignore_roles_names,
+                                                       subtitle_info_dict[ROLES_PATH])
 
         subtitle_srt_path = subtitle_info_dict[SUBTITLE_PATH]
+
         self._subs_entities_timeline_dict = self.create_video_roles_timeline(subtitle_srt_path)
 
     def create_video_roles_timeline(self, subtitle_path):

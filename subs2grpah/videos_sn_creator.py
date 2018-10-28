@@ -1,6 +1,7 @@
 from subs2grpah.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
-from subs2grpah.consts import EPISODE_NAME, EPISODE_ID, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, ACTORS_GRAPH, \
+from subs2grpah.consts import EPISODE_NAME, EPISODE_ID, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
+    ACTORS_GRAPH, \
     MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
 from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
@@ -19,26 +20,31 @@ logging.basicConfig(level=logging.INFO)
 
 class VideosSnCreator(object):
 
-    def get_series_graphs(self, series_name, thetvdb_id, seasons_set, episodes_set, subtitles_path,
+    def get_series_graphs(self, series_name, imdb_id, seasons_set, episodes_set, subtitles_path,
                           use_top_k_roles=None, timeelaps_seconds=60, graph_type=ROLES_GRAPH, min_weight=2):
         graphs_list = []
-        series_details_dict = VideoDatasetsCreator.get_series_episodes_details(thetvdb_id, series_name)
-        for k in series_details_dict.keys():
-            episode_number = int(series_details_dict[k][EPISODE_NUMBER])
-            seasons_number = int(series_details_dict[k][SEASON_NUMBER])
-            name = self._get_episode_name(series_name, seasons_number, episode_number)
-            if seasons_number not in seasons_set or episode_number not in episodes_set:
-                continue
-            try:
+        series_details_dict = VideoDatasetsCreator.get_series_episodes_details(imdb_id, series_name)
+        for seasons_number in series_details_dict:
+
+            for episode in series_details_dict[seasons_number].values():
+                episode_number = episode[EPISODE_NUMBER]
+
+                if seasons_number not in seasons_set or episode_number not in episodes_set:
+                    continue
+
+                episode_name = episode[EPISODE_NAME]
+                episode_rating = episode[EPISODE_RATING]
+                name = self._get_episode_name(series_name, seasons_number, episode_number)
+
+                # try:
                 g = self.get_episode_graph(name, series_name, seasons_number, episode_number,
-                                           series_details_dict[k][EPISODE_NAME],
-                                           series_details_dict[k][EPISODE_ID], subtitles_path=subtitles_path,
+                                           episode_name, episode_rating, subtitles_path=subtitles_path,
                                            use_top_k_roles=use_top_k_roles, timeelaps_seconds=timeelaps_seconds,
-                                           graph_type=graph_type, min_weight=min_weight)
+                                           graph_type=graph_type, min_weight=min_weight, imdb_id=imdb_id)
                 graphs_list.append(g)
-            except:
-                logging.warning("Could not fetch %s subtitles" % name)
-                continue
+                # except:
+                #     logging.warning("Could not fetch %s subtitles" % episode_name)
+                #     continue
 
         return graphs_list
 
@@ -124,13 +130,14 @@ class VideosSnCreator(object):
         g.graph[IMDB_RATING] = va.video_rating
         return g
 
-    def get_episode_graph(self, name, series_name, season_number, episode_number, episode_name, tvdb_id, subtitles_path,
-                          use_top_k_roles=None, timeelaps_seconds=60,
+    def get_episode_graph(self, name, series_name, season_number, episode_number, episode_name, imdb_rating,
+                          subtitles_path, imdb_id, use_top_k_roles=None, timeelaps_seconds=60,
                           graph_type=ROLES_GRAPH, min_weight=2):
         va = self._get_series_episode_video_sn_analyzer(name, series_name, season_number, episode_number, episode_name,
-                                                        tvdb_id, subtitles_path, use_top_k_roles, timeelaps_seconds)
+                                                        subtitles_path, use_top_k_roles, timeelaps_seconds, imdb_id)
+
         g = va.construct_social_network_graph(graph_type, min_weight)
-        g.graph[IMDB_RATING] = va.video_rating
+        g.graph[IMDB_RATING] = imdb_rating
         g.graph[VIDEO_NAME] = name
         g.graph[SERIES_NAME] = series_name
         g.graph[SEASON_NUMBER] = season_number
@@ -143,9 +150,8 @@ class VideosSnCreator(object):
         return self._fetch_and_analyze_subtitle(movie, subtitles_path, use_top_k_roles, timeelaps_seconds)
 
     def _get_series_episode_video_sn_analyzer(self, name, series_name, season_number, episode_number, episode_name,
-                                              tvdb_id, subtitles_path, use_top_k_roles, timeelaps_seconds):
-        episode = SubtitleFetcher.get_episode_obj(name, series_name, season_number, episode_number, episode_name,
-                                                  tvdb_id)
+                                               subtitles_path, use_top_k_roles, timeelaps_seconds, imdb_id):
+        episode = SubtitleFetcher.get_episode_obj(name, series_name, season_number, episode_number, episode_name, imdb_id)
         return self._fetch_and_analyze_subtitle(episode, subtitles_path, use_top_k_roles, timeelaps_seconds)
 
     def _fetch_and_analyze_subtitle(self, video_obj, subtitle_path, use_top_k_roles, timeelaps_seconds):
@@ -201,7 +207,7 @@ class VideosSnCreator(object):
         if add_headers:
             csv_lines.append(sep.join(headers))
         for v, u in g.edges():
-            r = [series_name, str(season_num), str(episode_num), v, u, str(g.edge[v][u][WEIGHT]),
+            r = [series_name, str(season_num), str(episode_num), v, u, str(g.adj[v][u][WEIGHT]),
                  str(rating)]
             csv_lines.append(sep.join(r))
         if append_to_file:
@@ -270,7 +276,6 @@ def test_get_director_movies(name):
 
 
 def save_output(graphs, v, type, name):
-
     joined_grpah = nx.compose_all(graphs)
     joined_grpah.graph[VIDEO_NAME] = name
     joined_grpah.graph["movie_year"] = MAX_YEAR
@@ -279,6 +284,7 @@ def save_output(graphs, v, type, name):
     v.save_graphs_to_csv(graphs, f"../temp/{type}/{name}/csv")
     v.draw_graphs(graphs, f"../temp/{type}/{name}/graphs")
     v.save_graphs_to_json(graphs, f"../temp/{type}/{name}/json")
+
 
 def save_graphs_outputs(graphs, v, name):
     v.save_graphs_features(graphs, f"../temp/actors/{name}/{name} features.tsv", True)
@@ -299,7 +305,7 @@ def test_get_movie(movie_title, year, imdb_id):
 
 if __name__ == "__main__":
     # test_get_movie("The Dark Knight",2008, "0468569")
-    test_get_series("Daredevil", "3322312",set(range(3,4)), set(range(1,14)))
+    test_get_series("The Simpsons", "0096697", set(range(1, 30)), set(range(1, 30)))
     # test_get_director_movies("Quentin Tarantino")
     # test_get_actor_movies("Brendan Fraser")
     # v = VideosSnCreator()
