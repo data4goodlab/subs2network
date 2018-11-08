@@ -27,17 +27,13 @@ class VideoRolesAnalyzer(object):
         :param remove_roles_names: list of roles names to ignore when analyzing the roles dict.
         """
 
-        if ignore_roles_names is None:
-            ignore_roles_names = []
         self._roles_dict = defaultdict(set)
-        self._imdb = IMDb()
-        self._imdb_id = imdb_id
-        self._imdb_movie = self._imdb.get_movie(self._imdb_id)
-        self._path = None
+        self._roles_path = None
         if roles_path is not None:
-            self._path = roles_path
+            self._roles_path = roles_path
+        if self._roles_path is None or not os.path.exists(self._roles_path):
+            self._imdb_movie = IMDb().get_movie(imdb_id)
         self._stop_words_english = set(stop_words.get_stop_words("english")) - set([n.lower() for n in names.words()])
-        self._ignore_roles = set([n.lower() for n in ignore_roles_names])
         self._use_top_k_roles = {}
         self._init_roles_dict(use_top_k_roles)
 
@@ -49,7 +45,7 @@ class VideoRolesAnalyzer(object):
         :param remove_possessives: remove roles name which contains possessives, such as Andy's Wife
         :return:
         """
-        if not os.path.exists(self._path):
+        if not os.path.exists(self._roles_path):
             re_possessive = re.compile("(\w+\'s\s+\w+)")
             cast_list = self._imdb_movie[IMDB_CAST]
             if use_top_k_roles is not None:
@@ -60,8 +56,8 @@ class VideoRolesAnalyzer(object):
                         if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
                             logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
                             continue
-                        if role[IMDB_NAME].lower() not in self._ignore_roles:
-                            self._add_role_to_roles_dict(p, role)
+                        # if role[IMDB_NAME].lower() not in self._ignore_roles:
+                        #     self._add_role_to_roles_dict(p, role)
                 else:
                     if p.currentRole is None or IMDB_NAME not in p.currentRole.keys():
                         logging.warning("Could not find current role for %s" % str(p))
@@ -70,12 +66,12 @@ class VideoRolesAnalyzer(object):
                         if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
                             logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
                             continue
-                        if role[IMDB_NAME].lower() not in self._ignore_roles:
-                            self._add_role_to_roles_dict(p, role)
-            with open(self._path, "w") as f:
-                pickle.dump(self._add_role_to_roles_dict, f)
+                        # if role[IMDB_NAME].lower() not in self._ignore_roles:
+                        self._add_role_to_roles_dict(p, role)
+            with open(self._roles_path, "wb") as f:
+                pickle.dump(self._roles_dict, f)
         else:
-            with open(self._path, "r") as f:
+            with open(self._roles_path, "rb") as f:
                 self._roles_dict = pickle.load(f)
 
     def _add_role_to_roles_dict(self, person, role):

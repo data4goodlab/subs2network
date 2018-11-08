@@ -5,13 +5,15 @@ from subs2grpah.consts import EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_
 import logging
 import os
 from imdb import IMDb
+import pickle
+
 
 class VideoDatasetsCreator(object):
     """
     Creates datasets with meta data infroamtion about a target TV series or a movie
     """
 
-    def __init__(self, series_csv_path=None, subtitles_save_path="/home/graphlab/temp/subtitles"):
+    def __init__(self, series_csv_path=None, subtitles_save_path="../temp/subtitles"):
         self._subtitles_save_path = subtitles_save_path
         if series_csv_path is not None:
             self._series_data_sframe = SFrame.read_csv(series_csv_path, delimiter=';', header=True,
@@ -20,76 +22,32 @@ class VideoDatasetsCreator(object):
                                                                           SERIES_ID: int})
 
     @staticmethod
-    def get_series_episodes_details(s_id, series_name):
+    def get_series_episodes_details(s_id, series_name, subtitles_path):
         """
         Returns TV series episodes' details from TheTVDB website
         :param s_id: series id in TheTVDB
         :param series_name: series name
         :return: dict with episodes information
         """
-        logging.info("Retreving series data of %s" % s_id)
-        ia = IMDb()
-        series = ia.get_movie(s_id)
-        try:
-            if series['kind'] != "tv series":
-                raise TypeError(f"{series_name} not a tv series")
-        except KeyError:
-            print(s_id)
+        series_path = f"{subtitles_path}/series_info.pkl"
+        if not os.path.exists(series_path):
+            logging.info("Retreving series data of %s" % s_id)
+            ia = IMDb()
+            series = ia.get_movie(s_id)
+            try:
+                if series['kind'] != "tv series":
+                    raise TypeError(f"{series_name} not a tv series")
+            except KeyError:
+                print(s_id)
 
-        ia.update(series, 'episodes')
+            ia.update(series, 'episodes')
+            if series['episodes']:
+                with open(series_path, "wb") as f:
+                    series = pickle.dump(series, f)
+        else:
+            with open(series_path, "rb") as f:
+                series = pickle.load(f)
         return series['episodes']
-        episodes_dict = {}
-        attributes_names_list = [EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE,
-                                 EPISODE_GUEST_STARTS, SERIES_ID, SEASON_ID, SEASON_NUMBER, DVD_SEASON]
-        for e in doc.getElementsByTagName("Episode"):
-            s_id = "%s_%s" % (VideoDatasetsCreator._get_value_by_tagname(e, SEASON_ID),
-                              VideoDatasetsCreator._get_value_by_tagname(e, EPISODE_ID))
-            if s_id in episodes_dict:
-                raise Exception("episode already parsed %s" % s_id)
-
-            episodes_dict[s_id] = {SERIES_NAME: series_name}
-
-            for a in attributes_names_list:
-                v = VideoDatasetsCreator._get_value_by_tagname(e, a)
-                episodes_dict[s_id][a] = ""
-                if v is not None:
-                    episodes_dict[s_id][a] = v
-        return episodes_dict
-    #
-    # @staticmethod
-    # def get_series_episodes_details(s_id, series_name):
-    #     """
-    #     Returns TV series episodes' details from TheTVDB website
-    #     :param s_id: series id in TheTVDB
-    #     :param series_name: series name
-    #     :return: dict with episodes information
-    #     """
-    #     logging.info("Retreving series data of %s" % s_id)
-    #     xml_path = "%s/%s.xml" % (TEMP_PATH, s_id)
-    #     if os.path.isfile(xml_path):
-    #         s = file(xml_path).read()
-    #     else:
-    #         u = urlopen(THE_TVDB_URL % s_id, timeout=90)
-    #         s = u.read()
-    #         file(xml_path, "w").write(s)
-    #     doc = parseString(s)
-    #     episodes_dict = {}
-    #     attributes_names_list = [EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE,
-    #                              EPISODE_GUEST_STARTS, SERIES_ID, SEASON_ID, SEASON_NUMBER, DVD_SEASON]
-    #     for e in doc.getElementsByTagName("Episode"):
-    #         s_id = "%s_%s" % (VideoDatasetsCreator._get_value_by_tagname(e, SEASON_ID),
-    #                           VideoDatasetsCreator._get_value_by_tagname(e, EPISODE_ID))
-    #         if s_id in episodes_dict:
-    #             raise Exception("episode already parsed %s" % s_id)
-    #
-    #         episodes_dict[s_id] = {SERIES_NAME: series_name}
-    #
-    #         for a in attributes_names_list:
-    #             v = VideoDatasetsCreator._get_value_by_tagname(e, a)
-    #             episodes_dict[s_id][a] = ""
-    #             if v is not None:
-    #                 episodes_dict[s_id][a] = v
-    #     return episodes_dict
 
     @staticmethod
     def _get_value_by_tagname(node, tag_name):

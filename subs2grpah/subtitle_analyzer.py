@@ -1,7 +1,7 @@
 from subs2grpah.video_roles_analyzer import VideoRolesAnalyzer
 import pysrt
-from collections import Counter
-from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH
+from collections import Counter, defaultdict
+from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME
 import logging
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
 from nltk.tag import StanfordNERTagger
@@ -10,6 +10,8 @@ from subs2grpah.exceptions import SubtitleNotFound
 import spacy
 import unicodedata, re
 from itertools import chain
+from subs2grpah.utils import get_movie_obj
+import networkx as nx
 
 
 class RemoveControlChars(object):
@@ -19,7 +21,6 @@ class RemoveControlChars(object):
         control_chars = ''.join(c for c in all_chars if unicodedata.category(c) == 'Cc')
         # or equivalently and much more efficiently
         control_chars = ''.join(map(chr, chain(range(0, 32), range(127, 160))))
-
         self.control_char_re = re.compile('[%s]' % re.escape(control_chars))
 
     def remove_control_chars(self, s):
@@ -39,7 +40,8 @@ class SubtitleAnalyzer(object):
         :param ignore_roles_names: list of roles name to ignore
 
         """
-
+        self._roles = defaultdict(lambda: {"role": None, "first": 0, "last": 0})
+        self._interactions = {}
         if ignore_roles_names is None:
             ignore_roles_names = []
         imdb_id = subtitle_info_dict[IMDB_ID]
@@ -84,18 +86,49 @@ class SubtitleAnalyzer(object):
         return subs_entities_timeline_dict
 
     def get_subtitles_entities_links(self, timelaps_seconds):
-        secs = list(self._subs_entities_timeline_dict.keys())
-        secs.sort()
-        edges = []
-        for i in range(len(secs)):
-            entities1 = self._subs_entities_timeline_dict[secs[i]]
+
+        timeline = sorted(self._subs_entities_timeline_dict.items(), key=lambda x: x[0])
+        edges_counter = Counter()
+        g = nx.Graph()
+        for i, item in enumerate(timeline):
+            t1, entities1 = item
+            self.update_appearances(g, entities1, t1)
             if len(entities1) > 1:
-                edges += self._get_edges(entities1, entities1)
-            for j in range(i + 1, len(secs)):
-                if secs[j] - secs[i] < timelaps_seconds:
-                    entities2 = self._subs_entities_timeline_dict[secs[j]]
-                    edges += self._get_edges(entities1, entities2)
-        return Counter(edges)
+                edges = self._get_edges(entities1, entities1)
+                edges_counter.update(edges)
+                self.update_interaction(g, edges, t1, edges_counter)
+            for t2, entities2 in timeline[i + 1:]:
+                if t2 - t1 < timelaps_seconds:
+                    edges = self._get_edges(entities1, entities2)
+                    edges_counter.update(edges)
+                    self.update_appearances(g, entities1, t1)
+                    self.update_appearances(g, entities2, t2)
+                    edges_counter.update(self._get_edges(entities1, entities1))
+                    self.update_interaction(g, edges, t2, edges_counter)
+
+                else:
+                    break
+        return g
+
+    @staticmethod
+    def update_appearances(g, roles, t):
+        for role in roles:
+            r = role[1][IMDB_NAME]
+            if r in g.node:
+                g.node[r]["last"] = t
+            else:
+                g.add_node(r, **{"first": t, "last": t})
+
+    @staticmethod
+    def update_interaction(g, roles, t, weights):
+        for role in roles:
+            v, u = role[0][1][IMDB_NAME], role[1][1][IMDB_NAME]
+            weight = weights[role]
+            if (v, u) in g.edges:
+                g.adj[v][u]["last"] = t
+                g.adj[v][u]["weight"] += 1
+            else:
+                g.add_edge(v, u, **{"first": t, "last": t, "weight": 1})
 
     def _get_edges(self, l1, l2):
         edges = []
@@ -108,14 +141,14 @@ class SubtitleAnalyzer(object):
                 edges.append((v1, v2))
         return edges
 
-    @property
-    def imdb_rating(self):
-        return self._video_role_analyzer.rating()
+        @property
+        def imdb_rating(self):
+            return self._video_role_analyzer.rating()
 
 
 if __name__ == "__main__":
-    movie = SubtitleFetcher.get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
+    movie = get_movie_obj("The Godfather", "The Godfather", 1972, "0068646")
     sf = SubtitleFetcher(movie)
     d = sf.fetch_subtitle("../temp")
     sa = SubtitleAnalyzer(d)
-    print(sa.get_subtitles_entities_links(60))
+    G = sa.get_subtitles_entities_links(60)

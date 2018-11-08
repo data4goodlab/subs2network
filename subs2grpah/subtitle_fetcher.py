@@ -6,8 +6,10 @@ import logging
 import pickle
 from subs2grpah.exceptions import SubtitleNotFound
 from guessit.api import GuessitException
+from subs2grpah.utils import get_movie_obj
 
 region.configure('dogpile.cache.dbm', arguments={'filename': '../temp/cachefile.dbm'})
+import types
 
 
 class SubtitleFetcher(object):
@@ -27,6 +29,10 @@ class SubtitleFetcher(object):
         self._video_obj = video_obj
         self._lang = lang
 
+    def load_video_obj(self):
+        if isinstance(self._video_obj, types.GeneratorType):
+            self._video_obj = next(self._video_obj)
+
     def fetch_subtitle(self, path):
         """
         Fetch the subtilte using subliminal or from local file
@@ -34,10 +40,10 @@ class SubtitleFetcher(object):
         :return:
         :rtype: dict
         """
-        # owd = os.getcwd()
-        # os.chdir(path)
+
         p = path + os.path.sep + self.get_video_string() + ".pkl"
         if not os.path.isfile(p):
+            self.load_video_obj()
             logging.debug("Fetching  %s's best matched subtitle" % self.get_video_string())
             # This download the best subtitle as SRT file to the current directory
             try:
@@ -86,10 +92,10 @@ class SubtitleFetcher(object):
         roles_path = path + os.path.sep + self.get_video_string() + "roles.pkl"
         try:
             d = {VIDEO_NAME: subtitle_obj.movie_name, IMDB_ID: subtitle_obj.movie_imdb_id,
-                 SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH:roles_path }
+                 SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH: roles_path}
         except AttributeError:
-            d = {VIDEO_NAME: f"{subtitle_obj.title}S{subtitle_obj.season}E{subtitle_obj.episode}", IMDB_ID: self._video_obj.series_imdb_id,
-                 SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH:roles_path}
+            d = {VIDEO_NAME: self._video_obj.name, IMDB_ID: self._video_obj.series_imdb_id,
+                 SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH: roles_path}
 
         logging.debug(f"Saving {self.get_video_string()}'s metadata to {p}")
         with open(p, "wb") as f:
@@ -156,20 +162,6 @@ class SubtitleFetcher(object):
         return type(self._video_obj) is video.Movie
 
     @staticmethod
-    def get_movie_obj(name, title, year, imdb_id):
-        """
-        Returns a subliminal movie object according to the movie's details
-        :param name: movie's name
-        :param title: the movie's title
-        :param year: the year the movie was created
-        :param imdb_id: the movie's IMDB id
-        :return: video.Movie object
-        :rtype: video.Movie
-        """
-        logging.info("Fetching Subtitle For Movie:%s | Year: %s | IMDB ID: %s " % (title, year, imdb_id))
-        return video.Movie(name=name, title=title, year=year, imdb_id=imdb_id)
-
-    @staticmethod
     def get_episode_obj(video_name, series, season_num, episode_num, episode_name, imdb_id):
         """
         Returns a subliminal TV episode object according to the episode's details
@@ -188,6 +180,6 @@ class SubtitleFetcher(object):
 
 
 if __name__ == "__main__":
-    movie = SubtitleFetcher.get_movie_obj("Kill Bill: Vol 2", "Kill Bill: Vol. 2", 2004, "0378194")
+    movie = get_movie_obj("Kill Bill: Vol 2", "Kill Bill: Vol. 2", 2004, "0378194")
     sf = SubtitleFetcher(movie)
     sf.fetch_subtitle("../temp")

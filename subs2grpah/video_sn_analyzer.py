@@ -7,6 +7,8 @@ import logging
 from subs2grpah.subtitle_fetcher import SubtitleFetcher
 from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
 import matplotlib.pyplot as plt
+from subs2grpah.utils import get_movie_obj
+
 
 class VideoSnAnalyzer(object):
     def __init__(self, video_name, entities_links_dict, video_rating=0):
@@ -29,7 +31,6 @@ class VideoSnAnalyzer(object):
             raise Exception("Unsupported graph type %s" % graph_type)
 
         g = nx.Graph()
-
         for e, w in self._entities_dict.items():
             if w < min_weight:
                 continue
@@ -96,7 +97,7 @@ class VideoSnAnalyzer(object):
 
 if __name__ == "__main__":
     video_name = "The Mummy"
-    movie = SubtitleFetcher.get_movie_obj(video_name, "The Mummy", 1999, "0120616")
+    movie = get_movie_obj(video_name, "The Mummy", 1999, "0120616")
     sf = SubtitleFetcher(movie)
     d = sf.fetch_subtitle("../temp")
     sa = SubtitleAnalyzer(d, use_top_k_roles=20)
