@@ -337,11 +337,11 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
 
 def get_movies_data():
     # https: // datasets.imdbws.com / title.ratings.tsv.gz
-    download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz")
+    download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz", True)
     rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t")
     rating = rating[rating["numVotes"] > 100000].sort("averageRating", ascending=False)
     # https: // datadbws.com / name.basics.tsv.gz
-    download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz")
+    download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz", False)
     title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t")
     sf = title.join(rating)
     sf = sf[sf["titleType"] == "movie"]

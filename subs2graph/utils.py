@@ -2,7 +2,7 @@ from subliminal import video
 import logging
 import requests
 import os
-import tqdm
+from tqdm import tqdm
 
 
 def add_prefix_to_dict_keys(d, prefix, sep="-"):

@@ -31,4 +31,4 @@ TEMP_PATH = "../temp"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"
 
 IMDB_TITLES_URL = "https://datasets.imdbws.com/title.basics.tsv.gz"
-IMDB_RATING_URL = "https://datasets.imdbws.com/title.rating.tsv.gz"
+IMDB_RATING_URL = "https://datasets.imdbws.com/title.ratings.tsv.gz"
