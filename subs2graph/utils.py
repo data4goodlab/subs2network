@@ -4,6 +4,23 @@ import requests
 import os
 from tqdm import tqdm
 
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, Content
+
+
+def send_email(send_to, subject, mail_content):
+    try:
+        sg = SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
+        # make a message object
+        from_email = Email("dimakagan15@gmail.com")
+        to_email = Email(send_to)
+        content = Content("text/plain", mail_content)
+        mail = Mail(from_email, subject, to_email, content)
+        response = sg.client.mail.send.post(request_body=mail.get())
+    except:
+        return False
+    return True
+
 
 def add_prefix_to_dict_keys(d, prefix, sep="-"):
     h = {}

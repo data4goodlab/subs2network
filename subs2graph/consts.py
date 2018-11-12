@@ -32,7 +32,7 @@ MOVIE_YEAR = "movie_year"
 ROLES_GRAPH = "roles_graph"
 ACTORS_GRAPH = "actors_graph"
 MAX_YEAR = 2018
-TEMP_PATH = f"{os.getenv('RELATIVE_PATH')}temp/"
+TEMP_PATH = f"{os.getenv('RELATIVE_PATH')}temp"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"
 
 IMDB_TITLES_URL = "https://datasets.imdbws.com/title.basics.tsv.gz"

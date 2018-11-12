@@ -16,7 +16,7 @@ import json
 from networkx.readwrite import json_graph
 from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
 from turicreate import SFrame
-from subs2graph.utils import download_file
+from subs2graph.utils import download_file, send_email
 
 logging.basicConfig(level=logging.INFO)
 
@@ -326,11 +326,10 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
                               f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
                               min_weight=5, rating=rating, graph_type=ACTORS_GRAPH)
               ]
+    save_output(graphs, "movies", movie_title)
 
     with open(f"{TEMP_PATH}/movies/{movie_title}/{movie_title}.json", 'w') as fp:
         json.dump(json.dumps(additional_data), fp)
-
-    save_output(graphs, "movies", movie_title)
 
 
 def get_movies_data():
@@ -351,7 +350,7 @@ def get_best_movies():
     movies = get_movies_data().head(1000)
     for m in movies:
         try:
-            if not os.path.exists(f"{TEMP_PATH}/movies/{m['primaryTitle']}/{m['primaryTitle']} features.tsv"):
+            if not os.path.exists(f"{TEMP_PATH}/movies/{m['primaryTitle']}/{m['primaryTitle']}.json"):
                 test_get_movie(m["primaryTitle"], m["startYear"], m["tconst"].strip("t"), m)
         except SubtitleNotFound:
             pass
@@ -367,3 +366,4 @@ if __name__ == "__main__":
     # name = "Modern Family"
     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
     # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
+    send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
