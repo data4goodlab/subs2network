@@ -27,5 +27,8 @@ MOVIE_YEAR = "movie_year"
 ROLES_GRAPH = "roles_graph"
 ACTORS_GRAPH = "actors_graph"
 MAX_YEAR = 2018
-TEMP_PATH = "/home/graphlab/temp"
+TEMP_PATH = "../temp"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"
+
+IMDB_TITLES_URL = "https://datasets.imdbws.com/title.basics.tsv.gz"
+IMDB_RATING_URL = "https://datasets.imdbws.com/title.rating.tsv.gz"

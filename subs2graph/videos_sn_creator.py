@@ -1,7 +1,7 @@
 from subs2graph.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
 from subs2graph.consts import EPISODE_NAME, EPISODE_ID, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
-    ACTORS_GRAPH, \
+    ACTORS_GRAPH, TEMP_PATH, IMDB_RATING_URL, IMDB_TITLES_URL,\
     MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.subtitle_analyzer import SubtitleAnalyzer
@@ -16,7 +16,7 @@ import json
 from networkx.readwrite import json_graph
 from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
 from turicreate import SFrame
-
+from subs2graph.utils import download_file
 logging.basicConfig(level=logging.INFO)
 
 
@@ -337,10 +337,12 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
 
 def get_movies_data():
     # https: // datasets.imdbws.com / title.ratings.tsv.gz
-    rating = SFrame.read_csv("../temp/title.ratings.tsv.gz", delimiter="\t")
+    download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz")
+    rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t")
     rating = rating[rating["numVotes"] > 100000].sort("averageRating", ascending=False)
     # https: // datadbws.com / name.basics.tsv.gz
-    title = SFrame.read_csv("../temp/title.basics.tsv.gz", delimiter="\t")
+    download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz")
+    title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t")
     sf = title.join(rating)
     sf = sf[sf["titleType"] == "movie"]
     # title = title[title["numVotes"] > 100000].sort("averageRating", ascending=False)
