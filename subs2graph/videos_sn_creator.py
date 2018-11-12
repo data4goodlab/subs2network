@@ -1,20 +1,20 @@
-from subs2grpah.video_datasets_creator import VideoDatasetsCreator
+from subs2graph.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
-from subs2grpah.consts import EPISODE_NAME, EPISODE_ID, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
+from subs2graph.consts import EPISODE_NAME, EPISODE_ID, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
     ACTORS_GRAPH, \
     MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
-from subs2grpah.subtitle_fetcher import SubtitleFetcher
-from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
-from subs2grpah.video_sn_analyzer import VideoSnAnalyzer
+from subs2graph.subtitle_fetcher import SubtitleFetcher
+from subs2graph.subtitle_analyzer import SubtitleAnalyzer
+from subs2graph.video_sn_analyzer import VideoSnAnalyzer
 from collections import Counter
 import matplotlib.pyplot as plt
 import os
 import logging
-from subs2grpah.exceptions import SubtitleNotFound
+from subs2graph.exceptions import SubtitleNotFound
 import networkx as nx
 import json
 from networkx.readwrite import json_graph
-from subs2grpah.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
+from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
 from turicreate import SFrame
 
 logging.basicConfig(level=logging.INFO)
@@ -339,7 +339,7 @@ def get_movies_data():
     # https: // datasets.imdbws.com / title.ratings.tsv.gz
     rating = SFrame.read_csv("../temp/title.ratings.tsv.gz", delimiter="\t")
     rating = rating[rating["numVotes"] > 100000].sort("averageRating", ascending=False)
-    # https: // datasets.imdbws.com / name.basics.tsv.gz
+    # https: // datadbws.com / name.basics.tsv.gz
     title = SFrame.read_csv("../temp/title.basics.tsv.gz", delimiter="\t")
     sf = title.join(rating)
     sf = sf[sf["titleType"] == "movie"]

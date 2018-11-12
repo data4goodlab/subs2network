@@ -1,16 +1,16 @@
-from subs2grpah.video_roles_analyzer import VideoRolesAnalyzer
+from subs2graph.video_roles_analyzer import VideoRolesAnalyzer
 import pysrt
 from collections import Counter, defaultdict
-from subs2grpah.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME
+from subs2graph.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME
 import logging
-from subs2grpah.subtitle_fetcher import SubtitleFetcher
+from subs2graph.subtitle_fetcher import SubtitleFetcher
 from nltk.tag import StanfordNERTagger
 from nltk.tokenize import word_tokenize
-from subs2grpah.exceptions import SubtitleNotFound
+from subs2graph.exceptions import SubtitleNotFound
 import spacy
 import unicodedata, re
 from itertools import chain
-from subs2grpah.utils import get_movie_obj
+from subs2graph.utils import get_movie_obj
 import networkx as nx
 
 

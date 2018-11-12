@@ -1,12 +1,12 @@
 import os
-from subs2grpah.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH, ROLES_PATH
+from subs2graph.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH, ROLES_PATH
 from subliminal import video, download_best_subtitles, save_subtitles, region, subtitle
 import babelfish
 import logging
 import pickle
-from subs2grpah.exceptions import SubtitleNotFound
+from subs2graph.exceptions import SubtitleNotFound
 from guessit.api import GuessitException
-from subs2grpah.utils import get_movie_obj
+from subs2graph.utils import get_movie_obj
 
 region.configure('dogpile.cache.dbm', arguments={'filename': '../temp/cachefile.dbm'})
 import types

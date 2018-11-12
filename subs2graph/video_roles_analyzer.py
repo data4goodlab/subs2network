@@ -1,6 +1,6 @@
 from imdb import IMDb
 from imdb.utils import RolesList
-from subs2grpah.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
+from subs2graph.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
 import re
 import stop_words
 import logging

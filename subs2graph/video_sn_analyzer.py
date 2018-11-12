@@ -1,13 +1,13 @@
 import networkx  as nx
-from subs2grpah.consts import ROLES_GRAPH, ACTORS_GRAPH, IMDB_RATING, VIDEO_NAME, MOVIE_YEAR
+from subs2graph.consts import ROLES_GRAPH, ACTORS_GRAPH, IMDB_RATING, VIDEO_NAME, MOVIE_YEAR
 import numpy as np
-from subs2grpah.utils import add_prefix_to_dict_keys
+from subs2graph.utils import add_prefix_to_dict_keys
 import os
 import logging
-from subs2grpah.subtitle_fetcher import SubtitleFetcher
-from subs2grpah.subtitle_analyzer import SubtitleAnalyzer
+from subs2graph.subtitle_fetcher import SubtitleFetcher
+from subs2graph.subtitle_analyzer import SubtitleAnalyzer
 import matplotlib.pyplot as plt
-from subs2grpah.utils import get_movie_obj
+from subs2graph.utils import get_movie_obj
 
 
 class VideoSnAnalyzer(object):

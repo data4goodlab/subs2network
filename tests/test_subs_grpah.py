@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Tests for `subs2grpah` package."""
+"""Tests for `subs2graph` package."""
 
 import pytest
 

@@ -1,6 +1,6 @@
 from xml.dom.minidom import parseString
 from urllib.request import urlopen
-from subs2grpah.consts import EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE, \
+from subs2graph.consts import EPISODE_ID, EPISODE_NAME, EPISODE_NUMBER, EPISODE_RATING, DVD_EPISODE, \
     EPISODE_GUEST_STARTS, SERIES_ID, SEASON_ID, SEASON_NUMBER, DVD_SEASON, SERIES_NAME, TEMP_PATH, THE_TVDB_URL
 import logging
 import os
