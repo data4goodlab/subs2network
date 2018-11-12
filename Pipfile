@@ -6,14 +6,13 @@ name = "pypi"
 [packages]
 networkx = "*"
 pysrt = "*"
-subliminal = "*"
+subliminal = {editable = true, ref = "develop", git = "https://github.com/Kagandi/subliminal.git"}
 babelfish = "*"
 numpy = "*"
 matplotlib = "*"
 turicreate = "*"
-imdbpy = "*"
+imdbpy = {editable = true, git = "https://github.com/alberanid/imdbpy.git"}
 stop-words = "*"
-"f2dca02" = {file = "https://github.com/Diaoul/subliminal/archive/develop.zip"}
 fuzzywuzzy = {extras = ["speedup"], version = "*"}
 nltk = "*"
 spacy = "*"

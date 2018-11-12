@@ -91,7 +91,7 @@ class SubtitleFetcher(object):
         p = path + os.path.sep + self.get_video_string() + ".pkl"
         roles_path = path + os.path.sep + self.get_video_string() + "roles.pkl"
         try:
-            d = {VIDEO_NAME: subtitle_obj.movie_name, IMDB_ID: subtitle_obj.movie_imdb_id,
+            d = {VIDEO_NAME: self._video_obj.name, IMDB_ID: self._video_obj.imdb_id,
                  SUBTITLE_PATH: self._get_subtitle_srt_path(path), ROLES_PATH: roles_path}
         except AttributeError:
             d = {VIDEO_NAME: self._video_obj.name, IMDB_ID: self._video_obj.series_imdb_id,

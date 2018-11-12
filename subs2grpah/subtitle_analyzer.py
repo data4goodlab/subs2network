@@ -65,8 +65,8 @@ class SubtitleAnalyzer(object):
         brackets = [re_brackets_split.findall(s) for s in subs_clean]
         subs_text = [word_tokenize(s) for s in subs_clean]
         st = StanfordNERTagger(
-            '/home/dima/Documents/subs2graph/ner/classifiers/english.all.3class.distsim.crf.ser.gz',
-            encoding='utf-8', path_to_jar="/home/dima/Documents/subs2graph/ner/stanford-ner.jar")
+            '../ner/classifiers/english.all.3class.distsim.crf.ser.gz',
+            encoding='utf-8', path_to_jar="../ner/stanford-ner.jar")
 
         nlp = spacy.load('en_core_web_sm', disable=['parser', 'tagger', 'textcat'])
         entities_spacy = [[(ent.text, ent.label_) for ent in nlp(s).ents] for s in subs_clean]
@@ -89,46 +89,48 @@ class SubtitleAnalyzer(object):
 
         timeline = sorted(self._subs_entities_timeline_dict.items(), key=lambda x: x[0])
         edges_counter = Counter()
-        g = nx.Graph()
+        graphs = [nx.Graph(), nx.Graph()]
         for i, item in enumerate(timeline):
             t1, entities1 = item
-            self.update_appearances(g, entities1, t1)
+            self.update_appearances(graphs, entities1, t1)
             if len(entities1) > 1:
                 edges = self._get_edges(entities1, entities1)
                 edges_counter.update(edges)
-                self.update_interaction(g, edges, t1, edges_counter)
+                self.update_interaction(graphs, edges, t1, edges_counter)
             for t2, entities2 in timeline[i + 1:]:
                 if t2 - t1 < timelaps_seconds:
                     edges = self._get_edges(entities1, entities2)
                     edges_counter.update(edges)
-                    self.update_appearances(g, entities1, t1)
-                    self.update_appearances(g, entities2, t2)
+                    self.update_appearances(graphs, entities1, t1)
+                    self.update_appearances(graphs, entities2, t2)
                     edges_counter.update(self._get_edges(entities1, entities1))
-                    self.update_interaction(g, edges, t2, edges_counter)
+                    self.update_interaction(graphs, edges, t2, edges_counter)
 
                 else:
                     break
-        return g
+        return graphs
 
     @staticmethod
-    def update_appearances(g, roles, t):
-        for role in roles:
-            r = role[1][IMDB_NAME]
-            if r in g.node:
-                g.node[r]["last"] = t
-            else:
-                g.add_node(r, **{"first": t, "last": t})
+    def update_appearances(graphs, roles, t):
+        for i, g in enumerate(graphs):
+            for role in roles:
+                r = role[i][IMDB_NAME]
+                if r in g.node:
+                    g.node[r]["last"] = t
+                else:
+                    g.add_node(r, **{"first": t, "last": t})
 
     @staticmethod
-    def update_interaction(g, roles, t, weights):
-        for role in roles:
-            v, u = role[0][1][IMDB_NAME], role[1][1][IMDB_NAME]
-            weight = weights[role]
-            if (v, u) in g.edges:
-                g.adj[v][u]["last"] = t
-                g.adj[v][u]["weight"] += 1
-            else:
-                g.add_edge(v, u, **{"first": t, "last": t, "weight": 1})
+    def update_interaction(graphs, roles, t, weights):
+        for i, g in enumerate(graphs):
+            for role in roles:
+                v, u = role[0][i][IMDB_NAME], role[1][i][IMDB_NAME]
+                weight = weights[role]
+                if (v, u) in g.edges:
+                    g.adj[v][u]["last"] = t
+                    g.adj[v][u]["weight"] += 1
+                else:
+                    g.add_edge(v, u, **{"first": t, "last": t, "weight": 1})
 
     def _get_edges(self, l1, l2):
         edges = []

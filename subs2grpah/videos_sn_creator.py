@@ -322,16 +322,24 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
                               f"../temp/movies/{movie_title}/subtitles", use_top_k_roles=None,
                               min_weight=5, rating=rating)]
 
-    with open(f"../temp/movies/{movie_title}/{movie_title}.json", 'w') as fp:
+    with open(f"../temp/movies/{movie_title}/{movie_title}_roles.json", 'w') as fp:
         json.dump(json.dumps(additional_data), fp)
 
     save_output(graphs, "movies", movie_title)
 
+    graphs = [get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
+                              f"../temp/movies/{movie_title}/subtitles", use_top_k_roles=None,
+                              min_weight=5, rating=rating, graph_type=ACTORS_GRAPH)]
+
+    save_output(graphs, "movies", f"{movie_title}_actors")
+
+
 
 def get_movies_data():
+    # https: // datasets.imdbws.com / title.ratings.tsv.gz
     rating = SFrame.read_csv("../temp/title.ratings.tsv.gz", delimiter="\t")
     rating = rating[rating["numVotes"] > 100000].sort("averageRating", ascending=False)
-
+    # https: // datasets.imdbws.com / name.basics.tsv.gz
     title = SFrame.read_csv("../temp/title.basics.tsv.gz", delimiter="\t")
     sf = title.join(rating)
     sf = sf[sf["titleType"] == "movie"]
@@ -342,9 +350,11 @@ def get_movies_data():
 def get_best_movies():
     movies = get_movies_data().head(1000)
     for m in movies:
-        if not os.path.exists(f"../temp/movies/{m['primaryTitle']}/{m['primaryTitle']} features.tsv"):
-            test_get_movie(m["primaryTitle"], m["startYear"], m["tconst"].strip("t"), m)
-
+        try:
+            if not os.path.exists(f"../temp/movies/{m['primaryTitle']}/{m['primaryTitle']} features.tsv"):
+                test_get_movie(m["primaryTitle"], m["startYear"], m["tconst"].strip("t"), m)
+        except SubtitleNotFound:
+            pass
 
 if __name__ == "__main__":
     get_best_movies()

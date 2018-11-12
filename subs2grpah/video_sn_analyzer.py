@@ -24,17 +24,15 @@ class VideoSnAnalyzer(object):
 
     def construct_social_network_graph(self, graph_type=ROLES_GRAPH, min_weight=2):
         if graph_type == ROLES_GRAPH:
-            entity_func = lambda n: n[1].get("name")  # lambda n: n[1].get("name")
+            g = self._entities_dict[1]
         elif graph_type == ACTORS_GRAPH:
-            entity_func = lambda n: n[0].get("name")  # Create actors graph
+            g = self._entities_dict[0]
         else:
             raise Exception("Unsupported graph type %s" % graph_type)
 
-        g = nx.Graph()
-        for e, w in self._entities_dict.items():
-            if w < min_weight:
-                continue
-            g.add_edge(entity_func(e[0]), entity_func(e[1]), weight=w)
+        g = g.edge_subgraph([(u, v) for (u, v, d) in g.edges(data=True) if d['weight'] >= min_weight])
+
+
         g.graph[IMDB_RATING] = self.video_rating
         g.graph[VIDEO_NAME] = self._video_name
         return g
@@ -96,8 +94,8 @@ class VideoSnAnalyzer(object):
 
 
 if __name__ == "__main__":
-    video_name = "The Mummy"
-    movie = get_movie_obj(video_name, "The Mummy", 1999, "0120616")
+    video_name = "The Matrix"
+    movie = get_movie_obj(video_name, "The Matrix", 1999, "0133093")
     sf = SubtitleFetcher(movie)
     d = sf.fetch_subtitle("../temp")
     sa = SubtitleAnalyzer(d, use_top_k_roles=20)
@@ -105,6 +103,7 @@ if __name__ == "__main__":
     va = VideoSnAnalyzer(video_name, e)
     g = va.construct_social_network_graph(ROLES_GRAPH)
     va.draw_graph(g, f"../temp/{video_name} Roles.png")
+    print(nx.info(g))
     g = va.construct_social_network_graph(ACTORS_GRAPH)
     va.draw_graph(g, f"../temp/{video_name} Players.png")
     print(nx.info(g))
