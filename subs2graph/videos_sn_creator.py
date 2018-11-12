@@ -266,20 +266,20 @@ def get_unintresting_features_names(features_dicts, min_freq=5):
 
 
 def create_dirs(t, name):
-    os.makedirs(f"../temp/{t}/{name}", exist_ok=True)
-    os.makedirs(f"../temp/{t}/{name}/csv", exist_ok=True)
-    os.makedirs(f"../temp/{t}/{name}/json", exist_ok=True)
-    os.makedirs(f"../temp/{t}/{name}/graphs", exist_ok=True)
-    os.makedirs(f"../temp/{t}/{name}/subtitles", exist_ok=True)
+    os.makedirs(f"{TEMP_PATH}/{t}/{name}", exist_ok=True)
+    os.makedirs(f"{TEMP_PATH}/{t}/{name}/csv", exist_ok=True)
+    os.makedirs(f"{TEMP_PATH}/{t}/{name}/json", exist_ok=True)
+    os.makedirs(f"{TEMP_PATH}/{t}/{name}/graphs", exist_ok=True)
+    os.makedirs(f"{TEMP_PATH}/{t}/{name}/subtitles", exist_ok=True)
 
 
 def test_get_series(name, s_id, seasons_set, episodes_set):
     create_dirs("series", name)
     graphs = []
-    for g in get_series_graphs(name, s_id, seasons_set, episodes_set, f"../temp/series/{name}/subtitles"):
+    for g in get_series_graphs(name, s_id, seasons_set, episodes_set, f"{TEMP_PATH}/series/{name}/subtitles"):
         save_output([g], "series", name)
         graphs.append(g)
-    save_graphs_features(graphs, f"../temp/""/{name}/{name} features.tsv", True)
+    save_graphs_features(graphs, f"{TEMP_PATH}/""/{name}/{name} features.tsv", True)
     joined_grpah = nx.compose_all(graphs)
     joined_grpah.graph[VIDEO_NAME] = name
     joined_grpah.graph["movie_year"] = MAX_YEAR
@@ -288,28 +288,28 @@ def test_get_series(name, s_id, seasons_set, episodes_set):
 
 def test_get_actor_movies(name):
     create_dirs("actors", name)
-    graphs = get_person_movies_graphs(name, f"../temp/actors/{name}/subtitles", ["actor"], movies_number=None)
+    graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/actors/{name}/subtitles", ["actor"], movies_number=None)
 
     save_output(graphs, "actors", name)
 
 
 def test_get_director_movies(name):
     create_dirs("directors", name)
-    graphs = get_person_movies_graphs(name, f"../temp/directors/{name}/subtitles", ["director"], movies_number=None)
+    graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/directors/{name}/subtitles", ["director"], movies_number=None)
 
     save_output(graphs, "directors", name)
 
 
 def save_output(graphs, type, name):
-    save_graphs_to_csv(graphs, f"../temp/{type}/{name}/csv")
-    draw_graphs(graphs, f"../temp/{type}/{name}/graphs")
-    save_graphs_to_json(graphs, f"../temp/{type}/{name}/json")
+    save_graphs_to_csv(graphs, f"{TEMP_PATH}/{type}/{name}/csv")
+    draw_graphs(graphs, f"{TEMP_PATH}/{type}/{name}/graphs")
+    save_graphs_to_json(graphs, f"{TEMP_PATH}/{type}/{name}/json")
 
 
 def save_graphs_outputs(graphs, name):
-    save_graphs_features(graphs, f"../temp/actors/{name}/{name} features.tsv", True)
-    save_graphs_to_csv(graphs, f"../temp/actors/{name}/csv")
-    draw_graphs(graphs, f"../temp/actors/{name}/graphs")
+    save_graphs_features(graphs, f"{TEMP_PATH}/actors/{name}/{name} features.tsv", True)
+    save_graphs_to_csv(graphs, f"{TEMP_PATH}/actors/{name}/csv")
+    draw_graphs(graphs, f"{TEMP_PATH}/actors/{name}/graphs")
 
 
 def test_get_movie(movie_title, year, imdb_id, additional_data=None):
@@ -319,16 +319,16 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
         rating = additional_data["averageRating"]
 
     graphs = [get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
-                              f"../temp/movies/{movie_title}/subtitles", use_top_k_roles=None,
+                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
                               min_weight=5, rating=rating)]
 
-    with open(f"../temp/movies/{movie_title}/{movie_title}_roles.json", 'w') as fp:
+    with open(f"{TEMP_PATH}/movies/{movie_title}/{movie_title}_roles.json", 'w') as fp:
         json.dump(json.dumps(additional_data), fp)
 
     save_output(graphs, "movies", movie_title)
 
     graphs = [get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
-                              f"../temp/movies/{movie_title}/subtitles", use_top_k_roles=None,
+                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
                               min_weight=5, rating=rating, graph_type=ACTORS_GRAPH)]
 
     save_output(graphs, "movies", f"{movie_title}_actors")
@@ -353,7 +353,7 @@ def get_best_movies():
     movies = get_movies_data().head(1000)
     for m in movies:
         try:
-            if not os.path.exists(f"../temp/movies/{m['primaryTitle']}/{m['primaryTitle']} features.tsv"):
+            if not os.path.exists(f"{TEMP_PATH}/movies/{m['primaryTitle']}/{m['primaryTitle']} features.tsv"):
                 test_get_movie(m["primaryTitle"], m["startYear"], m["tconst"].strip("t"), m)
         except SubtitleNotFound:
             pass
@@ -367,4 +367,4 @@ if __name__ == "__main__":
     # v = VideosSnCreator()
     # name = "Modern Family"
     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
-    # "../temp/series/%s/csv" % name, draw_graph_path="../temp/series/%s/graphs" % name)
+    # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
