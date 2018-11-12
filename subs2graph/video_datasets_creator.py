@@ -13,7 +13,7 @@ class VideoDatasetsCreator(object):
     Creates datasets with meta data infroamtion about a target TV series or a movie
     """
 
-    def __init__(self, series_csv_path=None, subtitles_save_path="../temp/subtitles"):
+    def __init__(self, series_csv_path=None, subtitles_save_path=f"{TEMP_PATH}/subtitles"):
         self._subtitles_save_path = subtitles_save_path
         if series_csv_path is not None:
             self._series_data_sframe = SFrame.read_csv(series_csv_path, delimiter=';', header=True,

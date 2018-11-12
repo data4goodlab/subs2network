@@ -1,7 +1,7 @@
 from subs2graph.video_roles_analyzer import VideoRolesAnalyzer
 import pysrt
 from collections import Counter, defaultdict
-from subs2graph.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME
+from subs2graph.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME, STANFORD_NLP_JAR, STANFORD_NLP_MODEL
 import logging
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from nltk.tag import StanfordNERTagger
@@ -64,9 +64,8 @@ class SubtitleAnalyzer(object):
         subs_clean = [cc.remove_control_chars(s.text.strip('-\\\/').replace("\n", " ")) for s in subs]
         brackets = [re_brackets_split.findall(s) for s in subs_clean]
         subs_text = [word_tokenize(s) for s in subs_clean]
-        st = StanfordNERTagger(
-            '../ner/classifiers/english.all.3class.distsim.crf.ser.gz',
-            encoding='utf-8', path_to_jar="../ner/stanford-ner.jar")
+        st = StanfordNERTagger(STANFORD_NLP_MODEL,
+                               encoding='utf-8', path_to_jar=STANFORD_NLP_JAR)
 
         nlp = spacy.load('en_core_web_sm', disable=['parser', 'tagger', 'textcat'])
         entities_spacy = [[(ent.text, ent.label_) for ent in nlp(s).ents] for s in subs_clean]

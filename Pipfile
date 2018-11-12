@@ -17,6 +17,7 @@ fuzzywuzzy = {extras = ["speedup"], version = "*"}
 nltk = "*"
 spacy = "*"
 nameparser = "*"
+python-dotenv = "*"
 
 [dev-packages]
 bumpversion = "==0.5.3"

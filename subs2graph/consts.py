@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+
 IMDB_CAST = "cast"
 IMDB_NAME = "name"
 MIN_NAME_SIZE = 2
@@ -27,8 +32,11 @@ MOVIE_YEAR = "movie_year"
 ROLES_GRAPH = "roles_graph"
 ACTORS_GRAPH = "actors_graph"
 MAX_YEAR = 2018
-TEMP_PATH = "../temp"
+TEMP_PATH = f"{os.getenv('RELATIVE_PATH')}temp"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"
 
 IMDB_TITLES_URL = "https://datasets.imdbws.com/title.basics.tsv.gz"
 IMDB_RATING_URL = "https://datasets.imdbws.com/title.ratings.tsv.gz"
+
+STANFORD_NLP_MODEL = f"{os.getenv('RELATIVE_PATH')}ner/classifiers/english.all.3class.distsim.crf.ser.gz"
+STANFORD_NLP_JAR = f"{os.getenv('RELATIVE_PATH')}ner/stanford-ner.jar"
