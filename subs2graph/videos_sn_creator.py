@@ -1,7 +1,7 @@
 from subs2graph.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
 from subs2graph.consts import EPISODE_NAME, EPISODE_ID, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
-    ACTORS_GRAPH, TEMP_PATH, IMDB_RATING_URL, IMDB_TITLES_URL,\
+    ACTORS_GRAPH, TEMP_PATH, IMDB_RATING_URL, IMDB_TITLES_URL, \
     MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.subtitle_analyzer import SubtitleAnalyzer
@@ -17,6 +17,7 @@ from networkx.readwrite import json_graph
 from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
 from turicreate import SFrame
 from subs2graph.utils import download_file
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -320,19 +321,16 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
 
     graphs = [get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
                               f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
-                              min_weight=5, rating=rating)]
+                              min_weight=5, rating=rating),
+              get_movie_graph(f"{movie_title} ({year}) (actors)", movie_title, year, imdb_id,
+                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
+                              min_weight=5, rating=rating, graph_type=ACTORS_GRAPH)
+              ]
 
-    with open(f"{TEMP_PATH}/movies/{movie_title}/{movie_title}_roles.json", 'w') as fp:
+    with open(f"{TEMP_PATH}/movies/{movie_title}/{movie_title}.json", 'w') as fp:
         json.dump(json.dumps(additional_data), fp)
 
     save_output(graphs, "movies", movie_title)
-
-    graphs = [get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
-                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
-                              min_weight=5, rating=rating, graph_type=ACTORS_GRAPH)]
-
-    save_output(graphs, "movies", f"{movie_title}_actors")
-
 
 
 def get_movies_data():
@@ -357,6 +355,7 @@ def get_best_movies():
                 test_get_movie(m["primaryTitle"], m["startYear"], m["tconst"].strip("t"), m)
         except SubtitleNotFound:
             pass
+
 
 if __name__ == "__main__":
     get_best_movies()
