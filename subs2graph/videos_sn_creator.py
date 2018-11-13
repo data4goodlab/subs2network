@@ -2,7 +2,7 @@ from subs2graph.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
 from subs2graph.consts import EPISODE_NAME, EPISODE_ID, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
     ACTORS_GRAPH, TEMP_PATH, IMDB_RATING_URL, IMDB_TITLES_URL, \
-    MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING
+    MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING, IMDB_CREW_URL, IMDB_NAMES_URL
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.subtitle_analyzer import SubtitleAnalyzer
 from subs2graph.video_sn_analyzer import VideoSnAnalyzer
@@ -18,6 +18,7 @@ from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_ob
 from turicreate import SFrame
 from subs2graph.utils import download_file, send_email
 import traceback
+import turicreate.aggregate as agg
 
 logging.basicConfig(level=logging.INFO)
 
@@ -59,7 +60,7 @@ def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=No
         movie_name = f"{title.replace('.','').replace('/','')} ({year})"
         try:
             g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
-                                timeelaps_seconds=timeelaps_seconds, graph_type=graph_type,
+                                timeelaps_seconds=timeelaps_seconds,
                                 min_weight=min_weight)
             graphs_list.append(g)
         except (SubtitleNotFound, AttributeError):
@@ -350,6 +351,34 @@ def get_movies_data():
     return sf.sort("averageRating", ascending=False)
 
 
+def get_directors_data():
+    # https: // datasets.imdbws.com / title.ratings.tsv.gz
+    download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz", False)
+    rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t")
+    rating = rating[rating["numVotes"] > 100000]
+    # https: // datadbws.com / name.basics.tsv.gz
+    download_file(IMDB_CREW_URL, f"{TEMP_PATH}/title.title.tsv.gz", False)
+    crew = SFrame.read_csv(f"{TEMP_PATH}/title.crew.tsv.gz", delimiter="\t")
+    crew["directors"] = crew["directors"].apply(lambda c: c.split(","))
+    crew = crew.stack("directors", "directors")
+    sf = crew.join(rating)
+    download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz", False)
+    title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t")
+    title = title[title["titleType"] == "movie"]
+    sf = sf.join(title)
+    sf = sf.groupby(key_column_names='directors',
+                    operations={'averageRating': agg.AVG("averageRating"), 'count': agg.COUNT()})
+    # print(sf.head(10))
+    sf = sf[sf["count"] > 10]
+
+    download_file(IMDB_NAMES_URL, f"{TEMP_PATH}/name.basics.tsv.gz", False)
+    names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
+    sf = sf.join(names,{"directors":"nconst"})
+    return sf.sort("averageRating", ascending=False)
+    # title = title[title["numVotes"] > 100000].sort("averageRating", ascending=False)
+    # return sf.sort("averageRating", ascending=False)
+
+
 def get_best_movies():
     movies = get_movies_data().head(1000)
     for m in movies:
@@ -363,18 +392,32 @@ def get_best_movies():
             pass
 
 
+def get_best_directors():
+    directors = get_directors_data().head(100)
+    for d in directors:
+        try:
+            director_name = d['primaryName'].replace("/", " ")
+            if not os.path.exists(f"{TEMP_PATH}/directors/{director_name}/{director_name}.json"):
+                test_get_director_movies(director_name)
+        except UnicodeEncodeError:
+            pass
+        except SubtitleNotFound:
+            pass
+
+
 if __name__ == "__main__":
-    try:
-        # get_best_movies()
-        test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
-        # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
-        # test_get_director_movies("Quentin Tarantino")
-        # test_get_actor_movies("Brendan Fraser")
-        # v = VideosSnCreator()
-        # name = "Modern Family"
-        # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
-        # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
-    except Exception as e:
-        send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
-    finally:
-        send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
+    get_best_directors()
+    # try:
+    #     # get_best_movies()
+    #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
+    #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
+    #     # test_get_director_movies("Quentin Tarantino")
+    #     # test_get_actor_movies("Brendan Fraser")
+    #     # v = VideosSnCreator()
+    #     # name = "Modern Family"
+    #     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
+    #     # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
+    # except Exception as e:
+    #     send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
+    # finally:
+    #     send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
