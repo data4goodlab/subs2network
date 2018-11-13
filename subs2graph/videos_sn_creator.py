@@ -406,8 +406,8 @@ def get_best_directors():
 
 
 if __name__ == "__main__":
-    get_best_directors()
-    # try:
+    try:
+        get_best_directors()
     #     # get_best_movies()
     #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
     #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
@@ -417,7 +417,7 @@ if __name__ == "__main__":
     #     # name = "Modern Family"
     #     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
     #     # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
-    # except Exception as e:
-    #     send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
-    # finally:
-    #     send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
+    except Exception as e:
+        send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
+    finally:
+        send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
