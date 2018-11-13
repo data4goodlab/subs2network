@@ -125,14 +125,20 @@ def draw_graphs(graphs_list, figures_path, output_format="png"):
 
 
 def get_movie_graph(name, title, year, imdb_id, subtitles_path, use_top_k_roles=None, timeelaps_seconds=60,
-                    graph_type=ROLES_GRAPH, min_weight=2, rating=None):
+                    min_weight=2, rating=None):
     va = _get_movie_video_sn_analyzer(name, title, year, imdb_id, subtitles_path, use_top_k_roles,
                                       timeelaps_seconds, rating)
-    g = va.construct_social_network_graph(graph_type, min_weight)
+    g = va.construct_social_network_graph(ROLES_GRAPH, min_weight)
     g.graph[VIDEO_NAME] = name
     g.graph[MOVIE_YEAR] = year
     g.graph[IMDB_RATING] = va.video_rating
-    return g
+
+    g_r = va.construct_social_network_graph(ACTORS_GRAPH, min_weight)
+    g_r.graph[VIDEO_NAME] = f"{name} - roles"
+    g_r.graph[MOVIE_YEAR] = year
+    g_r.graph[IMDB_RATING] = va.video_rating
+
+    return g, g_r
 
 
 def get_episode_graph(name, series_name, season_number, episode_number, episode_name, imdb_rating,
@@ -320,13 +326,10 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
     if additional_data:
         rating = additional_data["averageRating"]
 
-    graphs = [get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
-                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
-                              min_weight=5, rating=rating),
-              get_movie_graph(f"{movie_title} ({year}) (actors)", movie_title, year, imdb_id,
-                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
-                              min_weight=5, rating=rating, graph_type=ACTORS_GRAPH)
-              ]
+    graphs = get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
+                             f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
+                             min_weight=5, rating=rating)
+
     save_output(graphs, "movies", movie_title)
 
     with open(f"{TEMP_PATH}/movies/{movie_title}/{movie_title}.json", 'w') as fp:
@@ -354,14 +357,16 @@ def get_best_movies():
             movie_name = m['primaryTitle'].replace("/", " ")
             if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
                 test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+        except UnicodeEncodeError:
+            print(m["tconst"])
         except SubtitleNotFound:
             pass
 
 
 if __name__ == "__main__":
     try:
-        get_best_movies()
-        # test_get_movie("The Dark Knight",2008, "0468569")
+        # get_best_movies()
+        test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
         # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
         # test_get_director_movies("Quentin Tarantino")
         # test_get_actor_movies("Brendan Fraser")
