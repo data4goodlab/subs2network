@@ -351,8 +351,9 @@ def get_best_movies():
     movies = get_movies_data().head(1000)
     for m in movies:
         try:
-            if not os.path.exists(f"{TEMP_PATH}/movies/{m['primaryTitle']}/{m['primaryTitle']}.json"):
-                test_get_movie(m["primaryTitle"], m["startYear"], m["tconst"].strip("t"), m)
+            movie_name = m['primaryTitle'].replace("/", " ")
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
         except SubtitleNotFound:
             pass
 
