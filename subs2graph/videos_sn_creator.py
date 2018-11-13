@@ -17,6 +17,7 @@ from networkx.readwrite import json_graph
 from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
 from turicreate import SFrame
 from subs2graph.utils import download_file, send_email
+import traceback
 
 logging.basicConfig(level=logging.INFO)
 
@@ -357,13 +358,17 @@ def get_best_movies():
 
 
 if __name__ == "__main__":
-    get_best_movies()
-    # test_get_movie("The Dark Knight",2008, "0468569")
-    # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
-    # test_get_director_movies("Quentin Tarantino")
-    # test_get_actor_movies("Brendan Fraser")
-    # v = VideosSnCreator()
-    # name = "Modern Family"
-    # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
-    # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
-    send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
+    try:
+        get_best_movies()
+        # test_get_movie("The Dark Knight",2008, "0468569")
+        # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
+        # test_get_director_movies("Quentin Tarantino")
+        # test_get_actor_movies("Brendan Fraser")
+        # v = VideosSnCreator()
+        # name = "Modern Family"
+        # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
+        # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
+    except Exception as e:
+        send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
+    finally:
+        send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
