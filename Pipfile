@@ -18,6 +18,7 @@ nltk = "*"
 spacy = "*"
 nameparser = "*"
 python-dotenv = "*"
+sendgrid = "*"
 
 [dev-packages]
 bumpversion = "==0.5.3"

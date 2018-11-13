@@ -86,11 +86,18 @@ class VideoRolesAnalyzer(object):
         # words_set = set(words.words()) - set([n.lower() for n in names.words()])
         parts = re_white_space.findall(n)
         for name_part in parts:
+
+            if name_part == "himself":
+                self._add_role_to_roles_dict(person, person)
+
             if name_part in self._stop_words_english or len(name_part) < MIN_NAME_SIZE:
                 continue
+
             for part in name_part.split("-"):
                 if part not in self._stop_words_english or len(part) > MIN_NAME_SIZE:
                     self._roles_dict[part].add((person, role))
+
+
             # if name_part in words_set and len(parts) > 1:
             #     break
 
