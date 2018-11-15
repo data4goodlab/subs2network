@@ -1,15 +1,16 @@
 from imdb import IMDb
 from imdb.utils import RolesList
-from subs2graph.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
+from subs2graph.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE, TEMP_PATH
 import re
 import stop_words
 import logging
 from itertools import permutations, combinations
 from fuzzywuzzy import fuzz
-from nltk.corpus import names
 from collections import defaultdict, Counter
 import os
 import pickle
+from subs2graph.utils import to_iterable
+from nltk.corpus import names
 
 
 # import spacy
@@ -35,6 +36,8 @@ class VideoRolesAnalyzer(object):
             self._imdb_movie = IMDb().get_movie(imdb_id)
         self._stop_words_english = set(stop_words.get_stop_words("english")) - set([n.lower() for n in names.words()])
         self._use_top_k_roles = {}
+        self._top_ignore_words = set(ignore_roles_names[:200])
+        self._ignore_roles_names = set(ignore_roles_names)
         self._init_roles_dict(use_top_k_roles)
 
     def _init_roles_dict(self, use_top_k_roles, remove_possessives=True):
@@ -45,24 +48,21 @@ class VideoRolesAnalyzer(object):
         :param remove_possessives: remove roles name which contains possessives, such as Andy's Wife
         :return:
         """
+        role_counter = Counter()
         if not os.path.exists(self._roles_path):
             re_possessive = re.compile("(\w+\'s\s+\w+)")
             cast_list = self._imdb_movie[IMDB_CAST]
             if use_top_k_roles is not None:
                 cast_list = cast_list[:use_top_k_roles]
+
             for p in cast_list:
-                if type(p.currentRole) is RolesList:
-                    for role in p.currentRole:
-                        if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
-                            logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
-                            continue
-                        # if role[IMDB_NAME].lower() not in self._ignore_roles:
-                        #     self._add_role_to_roles_dict(p, role)
-                else:
-                    if p.currentRole is None or IMDB_NAME not in p.currentRole.keys():
+                for role in to_iterable(p.currentRole):
+
+                    if role.notes == '(uncredited)':
+                        break
+                    if role is None or IMDB_NAME not in role.keys():
                         logging.warning("Could not find current role for %s" % str(p))
                     else:
-                        role = p.currentRole
                         if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
                             logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
                             continue
@@ -79,24 +79,30 @@ class VideoRolesAnalyzer(object):
         n = str(role_name).strip().lower().replace('"', '')
         re_white_space = re.compile(r"\b([\w-].*?)\b")
         re_apost_name = re.compile(r"^'(.*?)'$")
-        re_split = re.compile(r"([\w-].*?)")
+        # re_split = re.compile(r"([\w-].*?)")
 
         if re_apost_name.match(n):
             n = re_apost_name.findall(n)[0]
         # words_set = set(words.words()) - set([n.lower() for n in names.words()])
         parts = re_white_space.findall(n)
         for name_part in parts:
+            if name_part.title() in self._top_ignore_words:
+                return
+        for name_part in parts:
 
-            if name_part == "himself":
+            if name_part == "himself" or name_part == "herself":
                 self._add_role_to_roles_dict(person, person)
+                continue
 
             if name_part in self._stop_words_english or len(name_part) < MIN_NAME_SIZE:
+                continue
+
+            if name_part in self._ignore_roles_names:
                 continue
 
             for part in name_part.split("-"):
                 if part not in self._stop_words_english or len(part) > MIN_NAME_SIZE:
                     self._roles_dict[part].add((person, role))
-
 
             # if name_part in words_set and len(parts) > 1:
             #     break

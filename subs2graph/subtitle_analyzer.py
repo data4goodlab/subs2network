@@ -43,7 +43,7 @@ class SubtitleAnalyzer(object):
         self._roles = defaultdict(lambda: {"role": None, "first": 0, "last": 0})
         self._interactions = {}
         if ignore_roles_names is None:
-            ignore_roles_names = []
+            ignore_roles_names = set()
         imdb_id = subtitle_info_dict[IMDB_ID]
         self._video_role_analyzer = VideoRolesAnalyzer(imdb_id.strip('t'), use_top_k_roles, ignore_roles_names,
                                                        subtitle_info_dict[ROLES_PATH])
