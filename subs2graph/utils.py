@@ -97,3 +97,11 @@ def download_file(url, output_path, exist_overwrite, min_size=0, verbose=True):
                             f.write(chunk)
                             size_read = min(total_size, size_read + 1024)
                             pbar.update(len(chunk))
+
+
+def to_iterable(item):
+    if item is None:  # include all nodes via iterator
+        item = []
+    elif not hasattr(item, "__iter__") or isinstance(item, str):  # if vertices is a single node
+        item = [item]  # ?iter()
+    return item
