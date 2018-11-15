@@ -22,6 +22,7 @@ import turicreate.aggregate as agg
 from nltk.corpus import words
 from nltk.corpus import names
 import shutil
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -68,7 +69,8 @@ def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=No
                                         min_weight=min_weight)
                     graphs_list.append(g)
                 else:
-                    shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/", f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/")
+                    shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/",
+                                    f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/")
         except (SubtitleNotFound, AttributeError):
             logging.warning("Could not fetch %s subtitles" % movie_name)
             continue
@@ -446,9 +448,9 @@ if __name__ == "__main__":
     try:
         # print(get_directors_data().head(100))
         # get_best_directors()
-        test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
-    # try:
-    #     # get_best_movies()
+        # test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
+        # try:
+        get_best_movies()
     #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
     #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
     #     # test_get_director_movies("Quentin Tarantino")
