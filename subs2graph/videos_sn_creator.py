@@ -2,7 +2,7 @@ from subs2graph.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
 from subs2graph.consts import EPISODE_NAME, DATA_PATH, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
     ACTORS_GRAPH, TEMP_PATH, IMDB_RATING_URL, IMDB_TITLES_URL, \
-    MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING, IMDB_CREW_URL, IMDB_NAMES_URL
+    MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING, IMDB_CREW_URL, IMDB_NAMES_URL, DEBUG
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.subtitle_analyzer import SubtitleAnalyzer
 from subs2graph.video_sn_analyzer import VideoSnAnalyzer
@@ -15,14 +15,14 @@ import networkx as nx
 import json
 from networkx.readwrite import json_graph
 from subs2graph.utils import get_movie_obj, get_episode_obj, get_lazy_episode_obj
-from turicreate import SFrame
 from subs2graph.utils import download_file, send_email
 import traceback
+from turicreate import SFrame
 import turicreate.aggregate as agg
 from nltk.corpus import words
 from nltk.corpus import names
 import shutil
-
+from subs2graph.imdb_dataset import imdb_data
 logging.basicConfig(level=logging.INFO)
 
 
@@ -52,8 +52,7 @@ def get_series_graphs(series_name, imdb_id, seasons_set, episodes_set, subtitles
 
 
 def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=None,
-                             use_top_k_roles=None, timeelaps_seconds=60, graph_type=ACTORS_GRAPH,
-                             min_weight=2):
+                             use_top_k_roles=None, timeelaps_seconds=60, min_weight=2, ignore_roles_names=None):
     graphs_list = []
     for m_id, title, year in get_person_movies(actor_name, types):
         if year > MAX_YEAR:
@@ -61,19 +60,19 @@ def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=No
         if movies_number is not None and len(graphs_list) >= movies_number:
             break
         movie_name = f"{title.replace('.','').replace('/','')} ({year})"
-        try:
-            if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/{movie_name}.json"):
-                if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
-                    g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
-                                        timeelaps_seconds=timeelaps_seconds,
-                                        min_weight=min_weight)
-                    graphs_list.append(g)
-                else:
-                    shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/",
-                                    f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/")
-        except (SubtitleNotFound, AttributeError):
-            logging.warning("Could not fetch %s subtitles" % movie_name)
-            continue
+        # try:
+        if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/{movie_name}.json"):
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+                g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
+                                    timeelaps_seconds=timeelaps_seconds,rating=imdb_data.get_movie_rating(m_id),
+                                    min_weight=min_weight, ignore_roles_names=ignore_roles_names)
+                graphs_list.append(g[1])
+            else:
+                shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/subtitles",
+                                f"{TEMP_PATH}/directors/{actor_name}/subtitles/")
+        # except (SubtitleNotFound, AttributeError):
+        #     logging.warning("Could not fetch %s subtitles" % movie_name)
+        #     continue
 
     return graphs_list
 
@@ -221,11 +220,12 @@ def get_person_movies(person_name, types=["actor"]):
     for t in types:
         m_list = person_filmography[t]
         for m in m_list:
-            m_id = m.getID()
-            year = m.get('year')
-            title = m.get('title')
-            if year:
-                yield m_id, title, year
+            if m.notes not in {"(Short)", "(TV Short)"}:
+                m_id = m.getID()
+                year = m.get('year')
+                title = m.get('title')
+                if year:
+                    yield m_id, title, year
 
 
 def _get_episode_name(series_name, season_number, episode_number):
@@ -312,9 +312,10 @@ def test_get_actor_movies(name):
     save_output(graphs, "actors", name)
 
 
-def test_get_director_movies(name):
+def test_get_director_movies(name, ignore_roles_names):
     create_dirs("directors", name)
-    graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/directors/{name}/subtitles", ["director"], movies_number=None)
+    graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/directors/{name}/subtitles", ["director"], movies_number=None,
+                                      ignore_roles_names=ignore_roles_names)
 
     save_output(graphs, "directors", name)
 
@@ -352,50 +353,9 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
         json.dump(json.dumps(additional_data), fp)
 
 
-def get_movies_data():
-    # https: // datasets.imdbws.com / title.ratings.tsv.gz
-    download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz", False)
-    rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t")
-    rating = rating[rating["numVotes"] > 100000].sort("averageRating", ascending=False)
-    # https: // datadbws.com / name.basics.tsv.gz
-    download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz", False)
-    title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t")
-    sf = title.join(rating)
-    sf = sf[sf["titleType"] == "movie"]
-    # title = title[title["numVotes"] > 100000].sort("averageRating", ascending=False)
-    return sf.sort("averageRating", ascending=False)
-
-
-def get_directors_data():
-    # https: // datasets.imdbws.com / title.ratings.tsv.gz
-    download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz", False)
-    rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t")
-    rating = rating[rating["numVotes"] > 100000]
-    # https: // datadbws.com / name.basics.tsv.gz
-    download_file(IMDB_CREW_URL, f"{TEMP_PATH}/title.crew.tsv.gz", False)
-    crew = SFrame.read_csv(f"{TEMP_PATH}/title.crew.tsv.gz", delimiter="\t")
-    crew["directors"] = crew["directors"].apply(lambda c: c.split(","))
-    crew = crew.stack("directors", "directors")
-    sf = crew.join(rating)
-    download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz", False)
-    title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t")
-    title = title[title["titleType"] == "movie"]
-    sf = sf.join(title)
-    sf = sf.groupby(key_column_names='directors',
-                    operations={'averageRating': agg.AVG("averageRating"), 'count': agg.COUNT()})
-    # print(sf.head(10))
-    sf = sf[sf["count"] > 5]
-
-    download_file(IMDB_NAMES_URL, f"{TEMP_PATH}/name.basics.tsv.gz", False)
-    names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
-    sf = sf.join(names, {"directors": "nconst"})
-    return sf.sort("averageRating", ascending=False)
-    # title = title[title["numVotes"] > 100000].sort("averageRating", ascending=False)
-    # return sf.sort("averageRating", ascending=False)
-
 
 def get_best_movies():
-    movies = get_movies_data().head(1000)
+    movies = imdb_data.get_movies_data().head(1000)
     for m in movies:
         try:
             movie_name = m['primaryTitle'].replace("/", " ")
@@ -408,12 +368,15 @@ def get_best_movies():
 
 
 def get_best_directors():
-    directors = get_directors_data().head(100)
+    directors = imdb_data.get_directors_data().head(100)
+    ignore_roles_names = load_black_list()
     for d in directors:
         try:
             director_name = d['primaryName'].replace("/", " ")
             if not os.path.exists(f"{TEMP_PATH}/directors/{director_name}/{director_name}.json"):
-                test_get_director_movies(director_name)
+                test_get_director_movies(director_name, ignore_roles_names)
+                with open(f"{TEMP_PATH}/directors/{director_name}/{director_name}.json", "w") as f:
+                    f.write(json.dumps(d))
         except UnicodeEncodeError:
             pass
         except SubtitleNotFound:
@@ -421,10 +384,10 @@ def get_best_directors():
 
 
 def generate_blacklist_roles():
-    firstnames = SFrame.read_csv(f"{TEMP_PATH}/firstnames.csv")["Name"]
-    surenames = SFrame.read_csv(f"{TEMP_PATH}/surenames.csv")["name"]
+    firstnames = SFrame.read_csv(f"{DATA_PATH}/firstnames.csv")["Name"]
+    surenames = SFrame.read_csv(f"{DATA_PATH}/surenames.csv")["name"]
     surenames = surenames.apply(lambda n: n.title())
-    sf = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list})
+    sf = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list}, na_values=["\\N"])
     sf = sf.filter_by(["actor", "actress"], "category")["tconst", "ordering", "characters", "nconst"]
     sf = sf.stack("characters", "character")
     sf["character"] = sf["character"].apply(lambda c: c.title())
@@ -440,17 +403,18 @@ def generate_blacklist_roles():
     sf = sf.sort("count", False)
     w = [x.title() for x in words.words()]
     sf = sf[sf['count'] > 11].append(sf[sf['count'] < 10].filter_by(w, "name"))
-    sf.export_csv("roles.csv")
+    sf.export_csv(f"{TEMP_PATH}/roles.csv")
 
 
 if __name__ == "__main__":
-
+    # generate_blacklist_roles()
+    # get_best_directors()
     try:
         # print(get_directors_data().head(100))
-        # get_best_directors()
+        get_best_directors()
         # test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
-        # try:
-        get_best_movies()
+
+        # get_best_movies()
     #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
     #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
     #     # test_get_director_movies("Quentin Tarantino")
@@ -460,6 +424,9 @@ if __name__ == "__main__":
     #     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
     #     # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
     except Exception as e:
-        send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
-    finally:
+        if not DEBUG:
+            send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
+        else:
+            raise e
+    if not DEBUG:
         send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
