@@ -105,3 +105,19 @@ def to_iterable(item):
     elif not hasattr(item, "__iter__") or isinstance(item, str):  # if vertices is a single node
         item = [item]  # ?iter()
     return item
+
+
+import glob
+
+
+def delete_movies_results(p):
+    for movie in os.listdir(p):
+        path = os.path.join(p, movie)
+        if glob.glob(os.path.join(path, f"subtitles/{movie}*roles.pkl")):
+            try:
+                os.remove(glob.glob(os.path.join(path, f"subtitles/{movie}*roles.pkl"))[0])
+                os.remove(os.path.join(path, f"{movie}.json"))
+            except FileNotFoundError:
+                pass
+
+

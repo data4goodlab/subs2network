@@ -43,3 +43,4 @@ IMDB_RATING_URL = "https://datasets.imdbws.com/title.ratings.tsv.gz"
 
 STANFORD_NLP_MODEL = f"{os.getenv('RELATIVE_PATH')}ner/classifiers/english.all.3class.distsim.crf.ser.gz"
 STANFORD_NLP_JAR = f"{os.getenv('RELATIVE_PATH')}ner/stanford-ner.jar"
+DEBUG = os.getenv('DEBUG') == 'True'
