@@ -220,7 +220,7 @@ def get_person_movies(person_name, types=["actor"]):
     for t in types:
         m_list = person_filmography[t]
         for m in m_list:
-            if m.notes not in {"(Short)", "(TV Short)"}:
+            if "Short" not in m.notes:
                 m_id = m.getID()
                 year = m.get('year')
                 title = m.get('title')
