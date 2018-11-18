@@ -374,6 +374,19 @@ def get_best_movies():
             pass
 
 
+def get_worst_movies():
+    movies = imdb_data.get_movies_data().tail(1000)
+    for m in movies:
+        try:
+            movie_name = m['primaryTitle'].replace("/", " ")
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+        except UnicodeEncodeError:
+            print(m["tconst"])
+        except SubtitleNotFound:
+            pass
+
+
 def get_best_directors():
     directors = imdb_data.get_directors_data().head(100)
     ignore_roles_names = load_black_list()
