@@ -9,6 +9,8 @@ from fuzzywuzzy import fuzz
 from collections import defaultdict, Counter
 import os
 import pickle
+
+from subs2graph.exceptions import CastNotFound
 from subs2graph.utils import to_iterable
 from nltk.corpus import names
 
@@ -48,10 +50,12 @@ class VideoRolesAnalyzer(object):
         :param remove_possessives: remove roles name which contains possessives, such as Andy's Wife
         :return:
         """
-        role_counter = Counter()
         if not os.path.exists(self._roles_path):
             re_possessive = re.compile("(\w+\'s\s+\w+)")
-            cast_list = self._imdb_movie[IMDB_CAST]
+            try:
+                cast_list = self._imdb_movie[IMDB_CAST]
+            except KeyError:
+                raise CastNotFound
             if use_top_k_roles is not None:
                 cast_list = cast_list[:use_top_k_roles]
 

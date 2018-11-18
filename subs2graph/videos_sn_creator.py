@@ -10,7 +10,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import os
 import logging
-from subs2graph.exceptions import SubtitleNotFound
+from subs2graph.exceptions import SubtitleNotFound, CastNotFound
 import networkx as nx
 import json
 from networkx.readwrite import json_graph
@@ -63,10 +63,13 @@ def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=No
         # try:
         if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/{movie_name}.json"):
             if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
-                g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
-                                    timeelaps_seconds=timeelaps_seconds,rating=imdb_data.get_movie_rating(m_id),
-                                    min_weight=min_weight, ignore_roles_names=ignore_roles_names)
-                graphs_list.append(g[1])
+                try:
+                    g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
+                                        timeelaps_seconds=timeelaps_seconds,rating=imdb_data.get_movie_rating(m_id),
+                                        min_weight=min_weight, ignore_roles_names=ignore_roles_names)
+                    yield g[1]
+                except CastNotFound:
+                    pass
             else:
                 shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/subtitles",
                                 f"{TEMP_PATH}/directors/{actor_name}/subtitles/")
@@ -309,15 +312,16 @@ def test_get_actor_movies(name):
     create_dirs("actors", name)
     graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/actors/{name}/subtitles", ["actor"], movies_number=None)
 
-    save_output(graphs, "actors", name)
+    for g in graphs:
+        save_output([g], "actors", name)
 
 
 def test_get_director_movies(name, ignore_roles_names):
     create_dirs("directors", name)
     graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/directors/{name}/subtitles", ["director"], movies_number=None,
                                       ignore_roles_names=ignore_roles_names)
-
-    save_output(graphs, "directors", name)
+    for g in graphs:
+        save_output([g], "directors", name)
 
 
 def save_output(graphs, type, name):
