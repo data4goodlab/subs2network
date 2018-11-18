@@ -19,6 +19,7 @@ spacy = "*"
 nameparser = "*"
 python-dotenv = "*"
 sendgrid = "*"
+python-dateutil = "*"
 
 [dev-packages]
 bumpversion = "==0.5.3"
