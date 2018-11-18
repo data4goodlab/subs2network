@@ -1,12 +1,13 @@
 import traceback
 from subs2graph.consts import DEBUG
 from subs2graph.utils import send_email
-from subs2graph.videos_sn_creator import get_best_directors
+from subs2graph.videos_sn_creator import get_best_directors, get_best_movies, get_worst_movies
 
 if __name__ == "__main__":
     try:
-        get_best_directors()
-
+        # get_best_directors()
+        get_best_movies()
+        get_worst_movies()
     except Exception as e:
         if not DEBUG:
             send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
