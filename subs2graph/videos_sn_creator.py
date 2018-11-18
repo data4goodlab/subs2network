@@ -2,7 +2,8 @@ from subs2graph.video_datasets_creator import VideoDatasetsCreator
 from imdb import IMDb
 from subs2graph.consts import EPISODE_NAME, DATA_PATH, EPISODE_RATING, EPISODE_NUMBER, ROLES_GRAPH, SEASON_NUMBER, \
     ACTORS_GRAPH, TEMP_PATH, IMDB_RATING_URL, IMDB_TITLES_URL, \
-    MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING, IMDB_CREW_URL, IMDB_NAMES_URL, DEBUG
+    MOVIE_YEAR, MAX_YEAR, SERIES_NAME, VIDEO_NAME, SRC_ID, DST_ID, WEIGHT, IMDB_RATING, IMDB_CREW_URL, IMDB_NAMES_URL, \
+    DEBUG
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.subtitle_analyzer import SubtitleAnalyzer
 from subs2graph.video_sn_analyzer import VideoSnAnalyzer
@@ -23,6 +24,7 @@ from nltk.corpus import words
 from nltk.corpus import names
 import shutil
 from subs2graph.imdb_dataset import imdb_data
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -65,10 +67,12 @@ def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=No
             if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
                 try:
                     g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
-                                        timeelaps_seconds=timeelaps_seconds,rating=imdb_data.get_movie_rating(m_id),
+                                        timeelaps_seconds=timeelaps_seconds, rating=imdb_data.get_movie_rating(m_id),
                                         min_weight=min_weight, ignore_roles_names=ignore_roles_names)
                     yield g[1]
                 except CastNotFound:
+                    pass
+                except AttributeError:
                     pass
             else:
                 shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/subtitles",
@@ -357,7 +361,6 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
         json.dump(json.dumps(additional_data), fp)
 
 
-
 def get_best_movies():
     movies = imdb_data.get_movies_data().head(1000)
     for m in movies:
@@ -391,7 +394,8 @@ def generate_blacklist_roles():
     firstnames = SFrame.read_csv(f"{DATA_PATH}/firstnames.csv")["Name"]
     surenames = SFrame.read_csv(f"{DATA_PATH}/surenames.csv")["name"]
     surenames = surenames.apply(lambda n: n.title())
-    sf = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list}, na_values=["\\N"])
+    sf = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list},
+                         na_values=["\\N"])
     sf = sf.filter_by(["actor", "actress"], "category")["tconst", "ordering", "characters", "nconst"]
     sf = sf.stack("characters", "character")
     sf["character"] = sf["character"].apply(lambda c: c.title())
