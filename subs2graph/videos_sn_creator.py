@@ -61,15 +61,20 @@ def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=No
             continue
         if movies_number is not None and len(graphs_list) >= movies_number:
             break
-        movie_name = f"{title.replace('.','').replace('/','')} ({year})"
+        title = title.replace('.','').replace('/','')
+        movie_name = f"{title} ({year})"
         # try:
-        if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{movie_name}/{movie_name}.json"):
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+        create_dirs("movies", title)
+
+        subtitles_path = f"{TEMP_PATH}/movies/{title}/subtitles"
+        graph_path = f"{TEMP_PATH}/movies/{title}/"
+        if not os.path.exists(f"{graph_path}/{movie_name}.json"):
+            if not os.path.exists(f"{subtitles_path}/{movie_name}.json"):
                 try:
                     g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
                                         timeelaps_seconds=timeelaps_seconds, rating=imdb_data.get_movie_rating(m_id),
                                         min_weight=min_weight, ignore_roles_names=ignore_roles_names)
-                    yield g[1]
+                    yield g
                 except CastNotFound:
                     pass
                 except AttributeError:
@@ -144,12 +149,12 @@ def get_movie_graph(name, title, year, imdb_id, subtitles_path, use_top_k_roles=
     va = _get_movie_video_sn_analyzer(name, title, year, imdb_id, subtitles_path, use_top_k_roles,
                                       timeelaps_seconds, rating, ignore_roles_names=ignore_roles_names)
     g = va.construct_social_network_graph(ROLES_GRAPH, min_weight)
-    g.graph[VIDEO_NAME] = name
+    g.graph[VIDEO_NAME] = title
     g.graph[MOVIE_YEAR] = year
     g.graph[IMDB_RATING] = va.video_rating
 
     g_r = va.construct_social_network_graph(ACTORS_GRAPH, min_weight)
-    g_r.graph[VIDEO_NAME] = f"{name} - roles"
+    g_r.graph[VIDEO_NAME] = f"{title} - roles"
     g_r.graph[MOVIE_YEAR] = year
     g_r.graph[IMDB_RATING] = va.video_rating
 
@@ -325,7 +330,8 @@ def test_get_director_movies(name, ignore_roles_names):
     graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/directors/{name}/subtitles", ["director"], movies_number=None,
                                       ignore_roles_names=ignore_roles_names)
     for g in graphs:
-        save_output([g], "directors", name)
+        save_output(g, "directors", name)
+        save_output(g, "movies", g[0].graph["movie_name"])
 
 
 def save_output(graphs, type, name):
@@ -346,11 +352,12 @@ def load_black_list():
 
 
 def test_get_movie(movie_title, year, imdb_id, additional_data=None):
-    create_dirs("movies", movie_title)
     rating = None
     if additional_data:
         rating = additional_data["averageRating"]
+    movie_title = movie_title.replace('.', '').replace('/', '')
 
+    create_dirs("movies", movie_title)
     graphs = get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
                              min_weight=5, rating=rating, ignore_roles_names=load_black_list())
@@ -365,7 +372,7 @@ def get_best_movies():
     movies = imdb_data.get_movies_data().head(1000)
     for m in movies:
         try:
-            movie_name = m['primaryTitle'].replace("/", " ")
+            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
             if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
                 test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
         except UnicodeEncodeError:
@@ -378,7 +385,7 @@ def get_worst_movies():
     movies = imdb_data.get_movies_data().tail(1000)
     for m in movies:
         try:
-            movie_name = m['primaryTitle'].replace("/", " ")
+            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
             if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
                 test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
         except UnicodeEncodeError:
@@ -392,7 +399,7 @@ def get_best_directors():
     ignore_roles_names = load_black_list()
     for d in directors:
         try:
-            director_name = d['primaryName'].replace("/", " ")
+            director_name = d['primaryName'].replace('.', '').replace('/', '')
             if not os.path.exists(f"{TEMP_PATH}/directors/{director_name}/{director_name}.json"):
                 test_get_director_movies(director_name, ignore_roles_names)
                 with open(f"{TEMP_PATH}/directors/{director_name}/{director_name}.json", "w") as f:
@@ -432,13 +439,14 @@ if __name__ == "__main__":
     # get_best_directors()
     try:
         # print(get_directors_data().head(100))
-        get_best_directors()
+        test_get_movie("E.T. The Extra-Terrestrial ", 1988, "0083866", {"averageRating": 7.9})
+
         # test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
 
         # get_best_movies()
     #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
     #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
-    #     # test_get_director_movies("Quentin Tarantino")
+    #     test_get_director_movies("Quentin Tarantino", load_black_list())
     #     # test_get_actor_movies("Brendan Fraser")
     #     # v = VideosSnCreator()
     #     # name = "Modern Family"
