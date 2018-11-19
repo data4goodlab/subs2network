@@ -38,7 +38,6 @@ class VideoRolesAnalyzer(object):
             self._imdb_movie = IMDb().get_movie(imdb_id)
         self._stop_words_english = set(stop_words.get_stop_words("english")) - set([n.lower() for n in names.words()])
         self._use_top_k_roles = {}
-        self._top_ignore_words = set(ignore_roles_names[:200])
         self._ignore_roles_names = set(ignore_roles_names)
         self._init_roles_dict(use_top_k_roles)
 
@@ -80,6 +79,8 @@ class VideoRolesAnalyzer(object):
 
     def _add_role_to_roles_dict(self, person, role):
         role_name = role[IMDB_NAME]
+        if role_name in self._ignore_roles_names:
+            return
         n = str(role_name).strip().lower().replace('"', '')
         re_white_space = re.compile(r"\b([\w-].*?)\b")
         re_apost_name = re.compile(r"^'(.*?)'$")
@@ -89,9 +90,7 @@ class VideoRolesAnalyzer(object):
             n = re_apost_name.findall(n)[0]
         # words_set = set(words.words()) - set([n.lower() for n in names.words()])
         parts = re_white_space.findall(n)
-        for name_part in parts:
-            if name_part.title() in self._top_ignore_words:
-                return
+
         for name_part in parts:
 
             if name_part == "himself" or name_part == "herself":
@@ -101,7 +100,7 @@ class VideoRolesAnalyzer(object):
             if name_part in self._stop_words_english or len(name_part) < MIN_NAME_SIZE:
                 continue
 
-            if name_part in self._ignore_roles_names:
+            if name_part.title() in self._ignore_roles_names:
                 continue
 
             for part in name_part.split("-"):

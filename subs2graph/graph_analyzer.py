@@ -49,6 +49,14 @@ def average_degree_connectivity(g):
     return {"average_degree_connectivity": nx.average_degree_connectivity(g)}
 
 
+def get_edge_number(g):
+    return {"edge_number": len(g.edges)}
+
+
+def get_node_number(g):
+    return {"node_number": len(g.node)}
+
+
 p = "../temp/top1000/movies/"
 res = []
 for movie in os.listdir(p):
@@ -60,6 +68,8 @@ for movie in os.listdir(p):
         try:
             with open(g_pth[0]) as f:
                 g = json_graph.node_link_graph(json.load(f))
+                d.update(get_edge_number(g))
+                d.update(get_node_number(g))
                 d.update(average_closeness_centrality(g))
                 d.update(average_betweenness_centrality(g))
                 d.update(average_eigenvector_centrality(g))
