@@ -379,6 +379,8 @@ def get_best_movies():
             print(m["tconst"])
         except SubtitleNotFound:
             pass
+        except CastNotFound:
+            pass
 
 
 def get_worst_movies():
@@ -392,6 +394,9 @@ def get_worst_movies():
             print(m["tconst"])
         except SubtitleNotFound:
             pass
+        except CastNotFound:
+            pass
+
 
 
 def get_best_directors():
