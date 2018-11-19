@@ -55,7 +55,7 @@ class SubtitleFetcher(object):
             if not subtitle:
                 raise SubtitleNotFound
             save_subtitles(self._video_obj, subtitle, encoding='utf-8', directory=path)
-            self._save_subtitle_info_dict(subtitle[0], path)
+            self._save_subtitle_info_dict(path)
         logging.debug("Loading %s metadata from %s" % (self.get_video_string(), p))
         with open(p, "rb") as f:
             # os.chdir(owd)
@@ -80,7 +80,7 @@ class SubtitleFetcher(object):
                     return search_path + os.path.sep + p
         return None
 
-    def _save_subtitle_info_dict(self, subtitle_obj, path):
+    def _save_subtitle_info_dict(self, path):
         """
         save subtitle's metadata as a dict object to a file using pickle
         :param subtitle_obj: dict with the subtitle's metadata that include the video's name, IMDB score, and
