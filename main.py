@@ -5,10 +5,10 @@ from subs2graph.videos_sn_creator import get_best_directors, get_best_movies, ge
 
 if __name__ == "__main__":
     try:
-        # get_best_directors()
-        # get_best_movies()
-        test_get_movie("The Dark Knight", 2008, "0468569")
-        # get_worst_movies()
+        get_best_movies()
+        # test_get_movie("The Dark Knight", 2008, "0468569")
+        get_worst_movies()
+        get_best_directors()
     except Exception as e:
         if not DEBUG:
             send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
