@@ -368,6 +368,20 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
         json.dump(json.dumps(additional_data), fp)
 
 
+def get_popular_movies():
+    movies = imdb_data.get_movies_data()
+    for m in movies:
+        try:
+            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+        except UnicodeEncodeError:
+            print(m["tconst"])
+        except SubtitleNotFound:
+            pass
+        except CastNotFound:
+            pass
+
 def get_best_movies():
     movies = imdb_data.get_movies_data().head(1000)
     for m in movies:
@@ -444,11 +458,11 @@ if __name__ == "__main__":
     # get_best_directors()
     try:
         # print(get_directors_data().head(100))
-        test_get_movie("E.T. The Extra-Terrestrial ", 1988, "0083866", {"averageRating": 7.9})
+        # test_get_movie("E.T. The Extra-Terrestrial ", 1988, "0083866", {"averageRating": 7.9})
 
         # test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
 
-        # get_best_movies()
+        get_best_movies()
     #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
     #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
     #     test_get_director_movies("Quentin Tarantino", load_black_list())

@@ -58,7 +58,7 @@ def get_node_number(g):
 
 
 def analyze_movies():
-    p = "../temp/top1000/movies/"
+    p = "../temp/movies/"
     res = []
     for movie in os.listdir(p):
         d = {}
@@ -132,21 +132,32 @@ from tqdm import tqdm
 
 def create_pdf():
     from PIL import Image
-
+    from PIL import ImageFont
+    from PIL import ImageDraw
     # imagelist is the list with all image filenames
-    p = "../temp/top1000/movies/"
+    p = "../temp/movies/"
     res = []
+
     for i, movie in enumerate(tqdm(os.listdir(p), total=len(os.listdir(p)))):
 
         path = os.path.join(p, movie)
         image = glob.glob(os.path.join(path, f"graphs/*({'[0-9]'*4}).png"))
         if image:
-            res.append(Image.open(image[0]).convert("RGB"))
-        # if i> 100:
-        #     break
 
-    res[0].save("test2.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:])
+
+            img = Image.open(image[0]).convert("RGB")
+            draw = ImageDraw.Draw(img)
+            # font = ImageFont.truetype(<font-file>, <font-size>)
+            font = ImageFont.truetype("arial.ttf", 50)
+            # draw.text((x, y),"Sample Text",(r,g,b))
+            draw.text((10, 10), movie, (0, 0, 0), font=font)
+            res.append(img)
+
+
+    res[0].save("test4.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:], quality=20,optimize=True)
 
 
 # analyze_directors()
 create_pdf()
+# analyze_movies()
+# analyze_movies()
