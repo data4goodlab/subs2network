@@ -41,14 +41,14 @@ class IMDbDatasets(object):
         return self._title
 
     def get_movies_data(self):
-        rating = self.rating[self.rating["numVotes"] > 50000].sort("averageRating", ascending=False)
+        rating = self.rating[self.rating["numVotes"] > 30000].sort("averageRating", ascending=False)
         sf = self.title.join(rating)
         sf = sf[sf["titleType"] == "movie"]
         return sf.sort("averageRating", ascending=False)
 
     def get_directors_data(self):
 
-        rating = self.rating[self.rating["numVotes"] > 50000]
+        rating = self.rating[self.rating["numVotes"] > 30000]
 
         sf = self.crew.join(rating)
 
