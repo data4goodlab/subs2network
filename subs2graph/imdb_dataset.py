@@ -1,5 +1,5 @@
 from turicreate import SFrame
-from subs2graph.consts import IMDB_RATING_URL, TEMP_PATH, IMDB_CREW_URL, IMDB_TITLES_URL
+from subs2graph.consts import IMDB_RATING_URL, TEMP_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL
 from subs2graph.utils import download_file
 import turicreate.aggregate as agg
 
@@ -10,18 +10,35 @@ class IMDbDatasets(object):
         self._rating = None
         self._crew = None
         self._title = None
+        self._actors = None
 
     def get_movie_rating(self, imdb_id):
         try:
-            return self.rating[self.rating["tconst"]==f"tt{imdb_id}"]["averageRating"][0]
+            return self.rating[self.rating["tconst"] == f"tt{imdb_id}"]["averageRating"][0]
         except IndexError:
             return None
+
+    @property
+    def actors(self):
+        if self._actors is None:
+            download_file(IMDB_PRINCIPALS_URL, f"{TEMP_PATH}/title.principals.tsv.gz", False)
+            self._actors = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", na_values=["\\N"])
+            self._actors = self._actors.filter_by(["actor", "actress"], "category")["tconst", "nconst"]
+            names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
+            self._actors = self._actors.join(
+                self.rating[(self.rating["titleType"] == "movie") & (self.rating["numVotes"] > 30000)])
+            self._actors = self._actors.groupby("nconst", operations={'averageRating': agg.AVG("averageRating"),
+                                                                      'count': agg.COUNT()})
+            self._actors = self._actors.join(names)
+            self._actors = self._actors.sort("averageRating", ascending=False)
+        return self._actors
 
     @property
     def rating(self):
         if self._rating is None:
             download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz", False)
             self._rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t", na_values=["\\N"])
+            self._rating = self._rating.join(self.title)
         return self._rating
 
     @property
@@ -41,14 +58,14 @@ class IMDbDatasets(object):
         return self._title
 
     def get_movies_data(self):
-        rating = self.rating[self.rating["numVotes"] > 30000].sort("averageRating", ascending=False)
+        rating = self.rating[self.rating["numVotes"] > 10000].sort("averageRating", ascending=False)
         sf = self.title.join(rating)
         sf = sf[sf["titleType"] == "movie"]
         return sf.sort("averageRating", ascending=False)
 
     def get_directors_data(self):
 
-        rating = self.rating[self.rating["numVotes"] > 30000]
+        rating = self.rating[self.rating["numVotes"] > 10000]
 
         sf = self.crew.join(rating)
 

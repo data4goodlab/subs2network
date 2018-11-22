@@ -19,6 +19,12 @@ def average_graph_degree(g):
     return add_prefix_to_dict_keys(stats.to_dict(), "degree")
 
 
+def average_actor_appearance(g):
+    stats = pd.Series([g.degree(v, weight="weight") for v in g.nodes()]).describe()
+    del stats["count"]
+    return add_prefix_to_dict_keys(stats.to_dict(), "appearance")
+
+
 def average_closeness_centrality(g):
     stats = pd.Series(list(nx.closeness_centrality(g).values())).describe()
     del stats["count"]
@@ -38,7 +44,10 @@ def average_betweenness_centrality(g):
 
 
 def average_clustering(g):
-    return {"average_clustering": nx.average_clustering(g)}
+    try:
+        return {"average_clustering": nx.average_clustering(g)}
+    except:
+        return {"average_clustering": 0}
 
 
 def graph_clique_number(g):
@@ -61,28 +70,27 @@ def analyze_movies():
     p = "../temp/movies/"
     res = []
     for movie in os.listdir(p):
-        d = {}
         path = os.path.join(p, movie)
-        g_pth = glob.glob(os.path.join(path, f"json/*({'[0-9]'*4}).json"))
-        if g_pth:
-            try:
-                with open(g_pth[0]) as f:
-                    g = json_graph.node_link_graph(json.load(f))
-                    d.update(get_edge_number(g))
-                    d.update(get_node_number(g))
-                    d.update(average_closeness_centrality(g))
-                    d.update(average_betweenness_centrality(g))
-                    d.update(average_eigenvector_centrality(g))
-                    d.update(average_graph_degree(g))
-                    d.update(average_graph_weight(g))
-                    d.update(average_clustering(g))
-                    d.update(graph_clique_number(g))
-                with open(os.path.join(path, f"{movie}.json")) as f:
-                    movie_info = json.load(f)
-                    d.update(json.loads(movie_info))
-                res.append(d)
-            except:
-                pass
+        g_pth = os.path.join(path, f"json/{movie}.json")
+        if not os.path.exists(os.path.join(path, f"json/{movie}.json")):
+            g_pth = glob.glob(os.path.join(path, f"json/*({'[0-9]'*4}).json"))
+            if g_pth: g_pth = g_pth[0]
+        if g_pth and os.path.exists(os.path.join(path, f"{movie}.json")):
+            # try:
+            with open(g_pth) as f:
+                g = json_graph.node_link_graph(json.load(f))
+                if g.number_of_nodes() == 0:
+                    continue
+                d = extract_graph_features(g)
+
+            with open(os.path.join(path, f"{movie}.json")) as f:
+                movie_info = json.load(f)
+                d.update(json.loads(movie_info))
+            res.append(d)
+            # except:
+            #     pass
+        # else:
+        #     print(movie)
     pd.DataFrame(res).to_csv("features.csv")
 
 
@@ -92,8 +100,8 @@ def analyze_directors():
         res = []
         json_path = os.path.join(p, director, "json")
         graphs = []
-        for g_pth in os.listdir(json_path):
-            g_pth = os.path.join(json_path, g_pth)
+        for g_pth in glob.glob(os.path.join(json_path, f"*roles*")):
+
             if g_pth:
                 try:
                     with open(g_pth) as f:
@@ -117,6 +125,7 @@ def extract_graph_features(g):
     d = {}
     d.update(get_edge_number(g))
     d.update(get_node_number(g))
+    d.update(average_actor_appearance(g))
     d.update(average_closeness_centrality(g))
     d.update(average_betweenness_centrality(g))
     # d.update(average_eigenvector_centrality(g))
@@ -143,8 +152,6 @@ def create_pdf():
         path = os.path.join(p, movie)
         image = glob.glob(os.path.join(path, f"graphs/*({'[0-9]'*4}).png"))
         if image:
-
-
             img = Image.open(image[0]).convert("RGB")
             draw = ImageDraw.Draw(img)
             # font = ImageFont.truetype(<font-file>, <font-size>)
@@ -153,11 +160,10 @@ def create_pdf():
             draw.text((10, 10), movie, (0, 0, 0), font=font)
             res.append(img)
 
+    res[0].save("test4.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:], quality=60, optimize=True)
 
-    res[0].save("test4.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:], quality=20,optimize=True)
 
-
-# analyze_directors()
-create_pdf()
+analyze_directors()
+# create_pdf()
 # analyze_movies()
 # analyze_movies()
