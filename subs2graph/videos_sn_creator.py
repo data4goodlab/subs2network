@@ -53,15 +53,15 @@ def get_series_graphs(series_name, imdb_id, seasons_set, episodes_set, subtitles
                 continue
 
 
-def get_person_movies_graphs(actor_name, subtitles_path, types, movies_number=None,
-                             use_top_k_roles=None, timeelaps_seconds=60, min_weight=2, ignore_roles_names=None):
+def get_person_movies_graphs(actor_name, types, movies_number=None, use_top_k_roles=None, timeelaps_seconds=60,
+                             min_weight=2, ignore_roles_names=None):
     graphs_list = []
     for m_id, title, year in get_person_movies(actor_name, types):
         if year > MAX_YEAR:
             continue
         if movies_number is not None and len(graphs_list) >= movies_number:
             break
-        title = title.replace('.','').replace('/','')
+        title = title.replace('.', '').replace('/', '')
         movie_name = f"{title} ({year})"
         # try:
         create_dirs("movies", title)
@@ -317,18 +317,18 @@ def test_get_series(name, s_id, seasons_set, episodes_set):
     save_output([joined_grpah], "series", name)
 
 
-def test_get_actor_movies(name):
+def test_get_actor_movies(name, ignore_roles_names):
     create_dirs("actors", name)
-    graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/actors/{name}/subtitles", ["actor"], movies_number=None)
+    graphs = get_person_movies_graphs(name, ["actor"], movies_number=None, ignore_roles_names=ignore_roles_names)
 
     for g in graphs:
-        save_output([g], "actors", name)
+        save_output(g, "actors", name)
+        save_output(g, "movies", g[0].graph["movie_name"])
 
 
 def test_get_director_movies(name, ignore_roles_names):
     create_dirs("directors", name)
-    graphs = get_person_movies_graphs(name, f"{TEMP_PATH}/directors/{name}/subtitles", ["director"], movies_number=None,
-                                      ignore_roles_names=ignore_roles_names)
+    graphs = get_person_movies_graphs(name, ["director"], movies_number=None, ignore_roles_names=ignore_roles_names)
     for g in graphs:
         save_output(g, "directors", name)
         save_output(g, "movies", g[0].graph["movie_name"])
@@ -382,6 +382,7 @@ def get_popular_movies():
         except CastNotFound:
             pass
 
+
 def get_best_movies():
     movies = imdb_data.get_movies_data().head(1000)
     for m in movies:
@@ -412,7 +413,6 @@ def get_worst_movies():
             pass
 
 
-
 def get_best_directors():
     directors = imdb_data.get_directors_data().head(100)
     ignore_roles_names = load_black_list()
@@ -423,6 +423,23 @@ def get_best_directors():
                 test_get_director_movies(director_name, ignore_roles_names)
                 with open(f"{TEMP_PATH}/directors/{director_name}/{director_name}.json", "w") as f:
                     f.write(json.dumps(d))
+        except UnicodeEncodeError:
+            pass
+        except SubtitleNotFound:
+            pass
+
+
+def get_popular_actors():
+    actors = imdb_data.actors
+    actors = actors[actors["count"] > 5]
+    ignore_roles_names = load_black_list()
+    for a in actors:
+        try:
+            actor_name = a['primaryName'].replace('.', '').replace('/', '')
+            if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{actor_name}.json"):
+                test_get_actor_movies(actor_name, ignore_roles_names=ignore_roles_names)
+                with open(f"{TEMP_PATH}/directors/{actor_name}/{actor_name}.json", "w") as f:
+                    f.write(json.dumps(a))
         except UnicodeEncodeError:
             pass
         except SubtitleNotFound:
@@ -456,25 +473,29 @@ def generate_blacklist_roles():
 if __name__ == "__main__":
     # generate_blacklist_roles()
     # get_best_directors()
-    try:
-        # print(get_directors_data().head(100))
-        # test_get_movie("E.T. The Extra-Terrestrial ", 1988, "0083866", {"averageRating": 7.9})
+    actors = imdb_data.actors
+    actors[actors["count"] > 5].print_rows(30)
+    # print(actors.to_dataframe().describe())
 
-        # test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
-
-        get_best_movies()
-    #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
-    #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
-    #     test_get_director_movies("Quentin Tarantino", load_black_list())
-    #     # test_get_actor_movies("Brendan Fraser")
-    #     # v = VideosSnCreator()
-    #     # name = "Modern Family"
-    #     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
-    #     # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
-    except Exception as e:
-        if not DEBUG:
-            send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
-        else:
-            raise e
-    if not DEBUG:
-        send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
+    # try:
+    #     # print(get_directors_data().head(100))
+    #     test_get_movie("The Legend of Zorro", 2005, "0386140", {"averageRating": 5.9})
+    #
+    #     # test_get_movie("Fight Club", 1999, "0137523", {"averageRating": 8.8})
+    #
+    #     # get_best_movies()
+    # #     test_get_movie("The Usual Suspects", 1995, "0114814", {"averageRating": 8.6})
+    # #     # test_get_series("Friends", "0108778", set(range(1, 11)), set(range(1, 30)))
+    # #     test_get_director_movies("Quentin Tarantino", load_black_list())
+    # #     # test_get_actor_movies("Brendan Fraser")
+    # #     # v = VideosSnCreator()
+    # #     # name = "Modern Family"
+    # #     # v.save_series_graphs(name, "95011" ,set(range(1,7)), set(range(1,25)),"/temp/series/%s/subtitles" % name,
+    # #     # "{TEMP_PATH}/series/%s/csv" % name, draw_graph_path="{TEMP_PATH}/series/%s/graphs" % name)
+    # except Exception as e:
+    #     if not DEBUG:
+    #         send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
+    #     else:
+    #         raise e
+    # if not DEBUG:
+    #     send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")

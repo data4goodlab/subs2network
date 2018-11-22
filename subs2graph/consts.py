@@ -40,6 +40,7 @@ IMDB_NAMES_URL = "https://datasets.imdbws.com/name.basics.tsv.gz"
 IMDB_TITLES_URL = "https://datasets.imdbws.com/title.basics.tsv.gz"
 IMDB_CREW_URL = "https://datasets.imdbws.com/title.crew.tsv.gz"
 IMDB_RATING_URL = "https://datasets.imdbws.com/title.ratings.tsv.gz"
+IMDB_PRINCIPALS_URL = "https://datasets.imdbws.com/title.principals.tsv.gz"
 
 STANFORD_NLP_MODEL = f"{os.getenv('RELATIVE_PATH')}ner/classifiers/english.all.3class.distsim.crf.ser.gz"
 STANFORD_NLP_JAR = f"{os.getenv('RELATIVE_PATH')}ner/stanford-ner.jar"
