@@ -79,6 +79,8 @@ def get_person_movies_graphs(actor_name, types, movies_number=None, use_top_k_ro
                     pass
                 except AttributeError:
                     pass
+                except SubtitleNotFound:
+                    pass
             else:
                 shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/subtitles",
                                 f"{TEMP_PATH}/directors/{actor_name}/subtitles/")
@@ -230,14 +232,15 @@ def get_person_movies(person_name, types=["actor"]):
     m_list = im.get_person_filmography(p.getID())
     person_filmography = dict(item for m in m_list['data']['filmography'] for item in m.items())
     for t in types:
-        m_list = person_filmography[t]
-        for m in m_list:
-            if "Short" not in m.notes:
-                m_id = m.getID()
-                year = m.get('year')
-                title = m.get('title')
-                if year:
-                    yield m_id, title, year
+        if t in person_filmography:
+            m_list = person_filmography[t]
+            for m in m_list:
+                if "Short" not in m.notes:
+                    m_id = m.getID()
+                    year = m.get('year')
+                    title = m.get('title')
+                    if year:
+                        yield m_id, title, year
 
 
 def _get_episode_name(series_name, season_number, episode_number):
@@ -317,9 +320,9 @@ def test_get_series(name, s_id, seasons_set, episodes_set):
     save_output([joined_grpah], "series", name)
 
 
-def test_get_actor_movies(name, ignore_roles_names):
+def test_get_actor_movies(name, ignore_roles_names, type):
     create_dirs("actors", name)
-    graphs = get_person_movies_graphs(name, ["actor"], movies_number=None, ignore_roles_names=ignore_roles_names)
+    graphs = get_person_movies_graphs(name, types=type, movies_number=None, ignore_roles_names=ignore_roles_names)
 
     for g in graphs:
         save_output(g, "actors", name)
@@ -433,16 +436,23 @@ def get_popular_actors():
     actors = imdb_data.actors
     actors = actors[actors["count"] > 5]
     ignore_roles_names = load_black_list()
+    test_get_actor_movies("Rob Schneider", ignore_roles_names=ignore_roles_names, type=["actor"])
     for a in actors:
         try:
+            type = ["atcor"]
+            if "actress" in a["primaryProfession"]:
+                type = ["actress"]
+
             actor_name = a['primaryName'].replace('.', '').replace('/', '')
             if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{actor_name}.json"):
-                test_get_actor_movies(actor_name, ignore_roles_names=ignore_roles_names)
+                test_get_actor_movies(actor_name, ignore_roles_names=ignore_roles_names, type=type)
                 with open(f"{TEMP_PATH}/directors/{actor_name}/{actor_name}.json", "w") as f:
                     f.write(json.dumps(a))
         except UnicodeEncodeError:
             pass
         except SubtitleNotFound:
+            pass
+        except KeyError:
             pass
 
 
