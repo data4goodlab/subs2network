@@ -24,8 +24,9 @@ from nltk.corpus import words
 from nltk.corpus import names
 import shutil
 from subs2graph.imdb_dataset import imdb_data
+from distutils.dir_util import copy_tree
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 
 
 def get_series_graphs(series_name, imdb_id, seasons_set, episodes_set, subtitles_path,
@@ -53,10 +54,11 @@ def get_series_graphs(series_name, imdb_id, seasons_set, episodes_set, subtitles
                 continue
 
 
-def get_person_movies_graphs(actor_name, types, movies_number=None, use_top_k_roles=None, timeelaps_seconds=60,
+def get_person_movies_graphs(actor_name, filmography, type="actors", movies_number=None, use_top_k_roles=None,
+                             timelaps_seconds=60,
                              min_weight=2, ignore_roles_names=None):
     graphs_list = []
-    for m_id, title, year in get_person_movies(actor_name, types):
+    for m_id, title, year in get_person_movies(actor_name, filmography):
         if year > MAX_YEAR:
             continue
         if movies_number is not None and len(graphs_list) >= movies_number:
@@ -68,27 +70,37 @@ def get_person_movies_graphs(actor_name, types, movies_number=None, use_top_k_ro
 
         subtitles_path = f"{TEMP_PATH}/movies/{title}/subtitles"
         graph_path = f"{TEMP_PATH}/movies/{title}/"
-        if not os.path.exists(f"{graph_path}/{movie_name}.json"):
-            if not os.path.exists(f"{subtitles_path}/{movie_name}.json"):
+        if not os.path.exists(f"{TEMP_PATH}/{type}/{actor_name}/json/{title}.json"):
+            if not os.path.exists(f"{graph_path}/{title}.json"):
                 try:
                     g = get_movie_graph(movie_name, title, year, m_id, subtitles_path, use_top_k_roles=use_top_k_roles,
-                                        timeelaps_seconds=timeelaps_seconds, rating=imdb_data.get_movie_rating(m_id),
+                                        timelaps_seconds=timelaps_seconds, rating=imdb_data.get_movie_rating(m_id),
                                         min_weight=min_weight, ignore_roles_names=ignore_roles_names)
                     yield g
                 except CastNotFound:
-                    pass
+                    logging.error(f"{actor_name} - {title}")
+                    logging.error(traceback.format_exc())
                 except AttributeError:
-                    pass
+                    logging.error(f"{actor_name} - {title}")
+                    logging.error(traceback.format_exc())
                 except SubtitleNotFound:
-                    pass
+                    logging.error(f"{actor_name} - {title}")
+                    logging.error(traceback.format_exc())
+                except UnicodeEncodeError:
+                    logging.error(f"{actor_name} - {title}")
+                    logging.error(traceback.format_exc())
+                except KeyError:
+                    logging.error(f"{actor_name} - {title}")
+                    logging.error(traceback.format_exc())
             else:
-                shutil.copytree(f"{TEMP_PATH}/movies/{movie_name}/subtitles",
-                                f"{TEMP_PATH}/directors/{actor_name}/subtitles/")
+                copy_tree(f"{TEMP_PATH}/movies/{title}/json",
+                                f"{TEMP_PATH}/{type}/{actor_name}/json")
+                copy_tree(f"{TEMP_PATH}/movies/{title}/graphs",
+                                f"{TEMP_PATH}/{type}/{actor_name}/graphs")
         # except (SubtitleNotFound, AttributeError):
         #     logging.warning("Could not fetch %s subtitles" % movie_name)
         #     continue
-
-    return graphs_list
+    return
 
 
 def save_graphs_features(graphs_list, features_path, remove_unintresting_features, sep="\t"):
@@ -146,10 +158,10 @@ def draw_graphs(graphs_list, figures_path, output_format="png"):
         draw_graph(g, draw_outpath)
 
 
-def get_movie_graph(name, title, year, imdb_id, subtitles_path, use_top_k_roles=None, timeelaps_seconds=60,
+def get_movie_graph(name, title, year, imdb_id, subtitles_path, use_top_k_roles=None, timelaps_seconds=60,
                     min_weight=2, rating=None, ignore_roles_names=None):
     va = _get_movie_video_sn_analyzer(name, title, year, imdb_id, subtitles_path, use_top_k_roles,
-                                      timeelaps_seconds, rating, ignore_roles_names=ignore_roles_names)
+                                      timelaps_seconds, rating, ignore_roles_names=ignore_roles_names)
     g = va.construct_social_network_graph(ROLES_GRAPH, min_weight)
     g.graph[VIDEO_NAME] = title
     g.graph[MOVIE_YEAR] = year
@@ -320,9 +332,9 @@ def test_get_series(name, s_id, seasons_set, episodes_set):
     save_output([joined_grpah], "series", name)
 
 
-def test_get_actor_movies(name, ignore_roles_names, type):
+def test_get_actor_movies(name, ignore_roles_names, filmography):
     create_dirs("actors", name)
-    graphs = get_person_movies_graphs(name, types=type, movies_number=None, ignore_roles_names=ignore_roles_names)
+    graphs = get_person_movies_graphs(name,  filmography, "actors", movies_number=None, ignore_roles_names=ignore_roles_names)
 
     for g in graphs:
         save_output(g, "actors", name)
@@ -331,7 +343,7 @@ def test_get_actor_movies(name, ignore_roles_names, type):
 
 def test_get_director_movies(name, ignore_roles_names):
     create_dirs("directors", name)
-    graphs = get_person_movies_graphs(name, ["director"], movies_number=None, ignore_roles_names=ignore_roles_names)
+    graphs = get_person_movies_graphs(name, ["director"], "directors", movies_number=None, ignore_roles_names=ignore_roles_names)
     for g in graphs:
         save_output(g, "directors", name)
         save_output(g, "movies", g[0].graph["movie_name"])
@@ -436,24 +448,16 @@ def get_popular_actors():
     actors = imdb_data.actors
     actors = actors[actors["count"] > 5]
     ignore_roles_names = load_black_list()
-    test_get_actor_movies("Rob Schneider", ignore_roles_names=ignore_roles_names, type=["actor"])
     for a in actors:
-        try:
-            type = ["atcor"]
-            if "actress" in a["primaryProfession"]:
-                type = ["actress"]
+        type = ["actor"]
+        if "actress" in a["primaryProfession"]:
+            type = ["actress"]
 
-            actor_name = a['primaryName'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/directors/{actor_name}/{actor_name}.json"):
-                test_get_actor_movies(actor_name, ignore_roles_names=ignore_roles_names, type=type)
-                with open(f"{TEMP_PATH}/directors/{actor_name}/{actor_name}.json", "w") as f:
-                    f.write(json.dumps(a))
-        except UnicodeEncodeError:
-            pass
-        except SubtitleNotFound:
-            pass
-        except KeyError:
-            pass
+        actor_name = a['primaryName'].replace('.', '').replace('/', '')
+        # if not os.path.exists(f"{TEMP_PATH}/actors/{actor_name}/{actor_name}.json"):
+        test_get_actor_movies(actor_name, ignore_roles_names=ignore_roles_names, filmography=type)
+        with open(f"{TEMP_PATH}/actors/{actor_name}/{actor_name}.json", "w") as f:
+            f.write(json.dumps(a))
 
 
 def generate_blacklist_roles():
