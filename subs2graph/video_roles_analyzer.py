@@ -170,7 +170,7 @@ class VideoRolesAnalyzer(object):
                 p = p.lower().split()
                 for r in p:
                     if r not in self._roles_dict:
-                        print(f"Warning: Skipping role {r} -- not in imdb")
+                        logging.warning(f"Skipping role {r} -- not in imdb")
                         continue
                     if len(self._roles_dict[r]) == 1:
                         matched_roles.add(list(self._roles_dict[r])[0])
@@ -202,7 +202,7 @@ class VideoRolesAnalyzer(object):
                 prev_person.append(r)
 
                 if r not in self._roles_dict:
-                    print(f"Warning: Skipping role {r} -- not in imdb")
+                    logging.warning(f"Skipping role {r} -- not in imdb")
                     continue
                 if len(self._roles_dict[r]) == 1:
                     matched_roles.add(list(self._roles_dict[r])[0])

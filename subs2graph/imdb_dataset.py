@@ -3,6 +3,12 @@ from subs2graph.consts import IMDB_RATING_URL, TEMP_PATH, IMDB_CREW_URL, IMDB_TI
 from subs2graph.utils import download_file
 import turicreate.aggregate as agg
 
+def get_gender(profession):
+    if "actor" in profession:
+        return "M"
+    if "actress" in profession:
+        return "F"
+    return "NA"
 
 class IMDbDatasets(object):
 
@@ -15,6 +21,12 @@ class IMDbDatasets(object):
     def get_movie_rating(self, imdb_id):
         try:
             return self.rating[self.rating["tconst"] == f"tt{imdb_id}"]["averageRating"][0]
+        except IndexError:
+            return None
+
+    def get_actot_gender(self, actor):
+        try:
+            return self.actors[self.actors["primaryName"] == actor]["gender"][0]
         except IndexError:
             return None
 
@@ -31,6 +43,7 @@ class IMDbDatasets(object):
                                                                       'count': agg.COUNT()})
             self._actors = self._actors.join(names)
             self._actors = self._actors.sort("averageRating", ascending=False)
+            self._actors["gender"] = self._actors["primaryProfession"].apply(lambda p: get_gender(p))
         return self._actors
 
     @property
