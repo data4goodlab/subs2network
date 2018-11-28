@@ -4,7 +4,44 @@ from networkx.readwrite import json_graph
 import json
 import networkx as nx
 import pandas as pd
+
 from subs2graph.utils import add_prefix_to_dict_keys
+from subs2graph.imdb_dataset import imdb_data
+
+
+def get_node_features(g):
+    res = {}
+    closeness = nx.closeness_centrality(g)
+    betweenness = nx.betweenness_centrality(g)
+    degree_centrality = nx.degree_centrality(g)
+    clustering = nx.clustering(g)
+    for v in g.nodes():
+        res["total_weight"] = g.degree(v, weight="weight")
+        res["degree"] = g.degree(v)
+        res["closeness"] = closeness[v]
+        res["betweenness"] = betweenness[v]
+        res["degree_centrality"] = degree_centrality[v]
+        res["clustering"] = clustering[v]
+        res["gender"] = imdb_data.get_actor_gender(v)
+        yield res
+
+
+def get_actor_features(g, actor):
+    res = {}
+    closeness = nx.closeness_centrality(g)
+    betweenness = nx.betweenness_centrality(g)
+    degree_centrality = nx.degree_centrality(g)
+    clustering = nx.clustering(g)
+    v = actor
+    res["total_weight"] = g.degree(v, weight="weight")
+    res["degree"] = g.degree(v)
+    res["closeness"] = closeness[v]
+    res["betweenness"] = betweenness[v]
+    res["degree_centrality"] = degree_centrality[v]
+    res["clustering"] = clustering[v]
+    # res["gender"] = imdb_data.get_actor_gender(v)
+    return res
+
 
 
 def average_graph_weight(g):
@@ -121,6 +158,21 @@ def analyze_directors():
             pd.DataFrame(res).to_csv(f"../temp/output/{director}.csv")
 
 
+def analyze_genders():
+    p = "../temp/movies/"
+    res = []
+    json_path = os.path.join(p, "*", "json")
+    for g_pth in tqdm(glob.glob(os.path.join(json_path, f"*roles*"))):
+
+        if g_pth:
+            with open(g_pth) as f:
+                g = json_graph.node_link_graph(json.load(f))
+                d = get_node_features(g)
+            res += list(d)
+
+    pd.DataFrame(res).to_csv(f"../temp/gender.csv")
+
+
 def extract_graph_features(g):
     d = {}
     d.update(get_edge_number(g))
@@ -163,7 +215,9 @@ def create_pdf():
     res[0].save("test4.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:], quality=60, optimize=True)
 
 
-analyze_directors()
-# create_pdf()
-# analyze_movies()
-# analyze_movies()
+if __name__ == "__main__":
+    analyze_genders()
+    # analyze_directors()
+    # create_pdf()
+    # analyze_movies()
+    # analyze_movies()

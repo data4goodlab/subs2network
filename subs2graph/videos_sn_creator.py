@@ -25,8 +25,10 @@ from nltk.corpus import names
 import shutil
 from subs2graph.imdb_dataset import imdb_data
 from distutils.dir_util import copy_tree
+from tqdm import tqdm
 
 logging.basicConfig(level=logging.ERROR)
+import pandas as pd
 
 
 def get_series_graphs(series_name, imdb_id, seasons_set, episodes_set, subtitles_path,
@@ -93,10 +95,11 @@ def get_person_movies_graphs(actor_name, filmography, type="actors", movies_numb
                     logging.error(f"{actor_name} - {title}")
                     logging.error(traceback.format_exc())
             else:
+                print(f"Copy: {actor_name} - {title}")
                 copy_tree(f"{TEMP_PATH}/movies/{title}/json",
-                                f"{TEMP_PATH}/{type}/{actor_name}/json")
+                          f"{TEMP_PATH}/{type}/{actor_name}/json")
                 copy_tree(f"{TEMP_PATH}/movies/{title}/graphs",
-                                f"{TEMP_PATH}/{type}/{actor_name}/graphs")
+                          f"{TEMP_PATH}/{type}/{actor_name}/graphs")
         # except (SubtitleNotFound, AttributeError):
         #     logging.warning("Could not fetch %s subtitles" % movie_name)
         #     continue
@@ -334,7 +337,8 @@ def test_get_series(name, s_id, seasons_set, episodes_set):
 
 def test_get_actor_movies(name, ignore_roles_names, filmography):
     create_dirs("actors", name)
-    graphs = get_person_movies_graphs(name,  filmography, "actors", movies_number=None, ignore_roles_names=ignore_roles_names)
+    graphs = get_person_movies_graphs(name, filmography, "actors", movies_number=None,
+                                      ignore_roles_names=ignore_roles_names)
 
     for g in graphs:
         save_output(g, "actors", name)
@@ -343,7 +347,8 @@ def test_get_actor_movies(name, ignore_roles_names, filmography):
 
 def test_get_director_movies(name, ignore_roles_names):
     create_dirs("directors", name)
-    graphs = get_person_movies_graphs(name, ["director"], "directors", movies_number=None, ignore_roles_names=ignore_roles_names)
+    graphs = get_person_movies_graphs(name, ["director"], "directors", movies_number=None,
+                                      ignore_roles_names=ignore_roles_names)
     for g in graphs:
         save_output(g, "directors", name)
         save_output(g, "movies", g[0].graph["movie_name"])
@@ -444,9 +449,27 @@ def get_best_directors():
             pass
 
 
+def generate_actors_files():
+    actors = imdb_data.actors
+    actors = actors[actors["count"] > 5]
+    res = []
+    for a in tqdm(actors):
+
+        nconst = a["nconst"]
+        for row in imdb_data.get_actor_movies(nconst):
+            title = row["primaryTitle"]
+            graph_path = f"{TEMP_PATH}/movies/{title}/"
+            if os.path.exists(f"{graph_path}/{title}.json"):
+                res.append({**a, **row, **{"path":  os.path.abspath(graph_path)}})
+    pd.DataFrame(res).to_csv(f"{TEMP_PATH}/actors.csv")
+
+
 def get_popular_actors():
     actors = imdb_data.actors
     actors = actors[actors["count"] > 5]
+    m_actors = actors[actors['gender']=="M"].head(500)
+    f_actors = actors[actors['gender']=="F"].head(500)
+    actors = f_actors.append(m_actors)
     ignore_roles_names = load_black_list()
     for a in actors:
         type = ["actor"]
@@ -488,7 +511,8 @@ if __name__ == "__main__":
     # generate_blacklist_roles()
     # get_best_directors()
     actors = imdb_data.actors
-    actors[actors["count"] > 5].print_rows(30)
+    f_actors = actors[actors["gender"]=="F"]
+    print(len(f_actors[f_actors["count"] > 5]))
     # print(actors.to_dataframe().describe())
 
     # try:
