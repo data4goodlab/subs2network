@@ -10,18 +10,23 @@ from subs2graph.imdb_dataset import imdb_data
 
 
 def get_node_features(g):
-    res = {}
     closeness = nx.closeness_centrality(g)
     betweenness = nx.betweenness_centrality(g)
     degree_centrality = nx.degree_centrality(g)
+    pr = nx.pagerank(g)
     clustering = nx.clustering(g)
     for v in g.nodes():
+        res = {}
         res["total_weight"] = g.degree(v, weight="weight")
         res["degree"] = g.degree(v)
+        res["movie_name"] = g.graph["movie_name"]
+        res["year"] = g.graph["movie_year"]
+        res["imdb_rating"] = g.graph["imdb_rating"]
         res["closeness"] = closeness[v]
         res["betweenness"] = betweenness[v]
         res["degree_centrality"] = degree_centrality[v]
         res["clustering"] = clustering[v]
+        res["pagerank"] = pr[v]
         res["gender"] = imdb_data.get_actor_gender(v)
         yield res
 
@@ -32,6 +37,8 @@ def get_actor_features(g, actor):
     betweenness = nx.betweenness_centrality(g)
     degree_centrality = nx.degree_centrality(g)
     clustering = nx.clustering(g)
+    pr = nx.pagerank(g)
+
     v = actor
     res["total_weight"] = g.degree(v, weight="weight")
     res["degree"] = g.degree(v)
@@ -39,9 +46,11 @@ def get_actor_features(g, actor):
     res["betweenness"] = betweenness[v]
     res["degree_centrality"] = degree_centrality[v]
     res["clustering"] = clustering[v]
+    res["movie_rating"] = g.graph["imdb_rating"]
+    res["pagerank"] = pr[v]
+
     # res["gender"] = imdb_data.get_actor_gender(v)
     return res
-
 
 
 def average_graph_weight(g):
@@ -106,29 +115,29 @@ def get_node_number(g):
 def analyze_movies():
     p = "../temp/movies/"
     res = []
-    for movie in os.listdir(p):
+    for movie in tqdm(os.listdir(p)):
         path = os.path.join(p, movie)
         g_pth = os.path.join(path, f"json/{movie}.json")
-        if not os.path.exists(os.path.join(path, f"json/{movie}.json")):
-            g_pth = glob.glob(os.path.join(path, f"json/*({'[0-9]'*4}).json"))
+        if not os.path.exists(g_pth):
+            g_pth = glob.glob(os.path.join(path, f"json/*.json"))
             if g_pth: g_pth = g_pth[0]
-        if g_pth and os.path.exists(os.path.join(path, f"{movie}.json")):
+        if g_pth:
             # try:
             with open(g_pth) as f:
                 g = json_graph.node_link_graph(json.load(f))
                 if g.number_of_nodes() == 0:
                     continue
                 d = extract_graph_features(g)
-
-            with open(os.path.join(path, f"{movie}.json")) as f:
-                movie_info = json.load(f)
-                d.update(json.loads(movie_info))
+            #
+            # with open(os.path.join(path, f"{movie}.json")) as f:
+            #     movie_info = json.load(f)
+            #     d.update(json.loads(movie_info))
             res.append(d)
             # except:
             #     pass
         # else:
         #     print(movie)
-    pd.DataFrame(res).to_csv("features.csv")
+    pd.DataFrame(res).to_csv(f"../temp//graph_features.csv", index=False)
 
 
 def analyze_directors():
@@ -155,20 +164,44 @@ def analyze_directors():
             d = extract_graph_features(joined_grpah)
             d["name"] = "combined"
             res.append(d)
-            pd.DataFrame(res).to_csv(f"../temp/output/{director}.csv")
+        pd.DataFrame(res).to_csv(f"../temp/output/{director}.csv", index=False)
+
+
+def get_triangles(g):
+    all_cliques = nx.enumerate_all_cliques(g)
+    return [x for x in all_cliques if len(x) == 3]
+
+
+def analyze_triangles():
+    p = "../temp/movies/"
+    res = []
+    json_path = os.path.join(p, "*", "json")
+    for g_pth in tqdm(glob.glob(os.path.join(json_path, f"*roles.json"))):
+
+        if g_pth:
+            with open(g_pth) as f:
+                g = json_graph.node_link_graph(json.load(f))
+                tr = get_triangles(g)
+            for t in tr:
+                t.append(g.graph["movie_name"].strip(" - roles"))
+                t.append(g.graph["movie_year"])
+            res += tr
+
+    pd.DataFrame(res).to_csv(f"../temp/triangles.csv")
 
 
 def analyze_genders():
     p = "../temp/movies/"
     res = []
     json_path = os.path.join(p, "*", "json")
-    for g_pth in tqdm(glob.glob(os.path.join(json_path, f"*roles*"))):
+    for g_pth in tqdm(glob.glob(os.path.join(json_path, f"*roles.json"))):
 
         if g_pth:
             with open(g_pth) as f:
                 g = json_graph.node_link_graph(json.load(f))
-                d = get_node_features(g)
-            res += list(d)
+                if g.number_of_nodes() > 9:
+                    d = get_node_features(g)
+                    res += list(d)
 
     pd.DataFrame(res).to_csv(f"../temp/gender.csv")
 
@@ -185,6 +218,12 @@ def extract_graph_features(g):
     d.update(average_graph_weight(g))
     d.update(average_clustering(g))
     d.update(graph_clique_number(g))
+    genders = get_genders_in_graph(g)
+    d["m_count"] = genders.count("M")
+    d["f_count"] = genders.count("F")
+    d["movie_name"] = g.graph["movie_name"]
+    d["year"] = g.graph["movie_year"]
+    d["imdb_rating"] = g.graph["imdb_rating"]
     return d
 
 
@@ -215,9 +254,46 @@ def create_pdf():
     res[0].save("test4.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:], quality=60, optimize=True)
 
 
+def add_gender_to_graph(movie):
+    p = "../temp/movies/"
+    json_path = os.path.join(p, movie, "json")
+    graph_path = glob.glob(os.path.join(json_path, f"*roles*"))[0]
+    with open(graph_path) as f:
+        g = json_graph.node_link_graph(json.load(f))
+        for v in g.nodes():
+            g.node[v]["gender"] = imdb_data.get_actor_gender(v)
+    data = json_graph.node_link_data(g)
+    json_path = f"../temp/{movie}.json"
+    with open(json_path, 'w') as fp:
+        json.dump(data, fp)
+
+
+def gender_in_top_movies():
+    p = "../temp/movies/"
+    movies = imdb_data.get_movies_data()
+    for m in tqdm(movies):
+        gender = []
+        movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
+        json_path = os.path.join(p, movie_name, "json")
+        try:
+            graph_path = glob.glob(os.path.join(json_path, f"*roles.json"))[0]
+            with open(graph_path) as f:
+                g = json_graph.node_link_graph(json.load(f))
+                yield get_genders_in_graph(g)
+        except IndexError:
+            pass
+
+
+def get_genders_in_graph(g):
+    return [imdb_data.get_actor_gender(v) for v in g.nodes()]
+
+
 if __name__ == "__main__":
-    analyze_genders()
+    # gender_in_top_movies()
+    # add_gender_to_graph("Harry Potter and the Goblet of Fire")
+    # analyze_triangles()
+    # analyze_genders()
     # analyze_directors()
     # create_pdf()
     # analyze_movies()
-    # analyze_movies()
+    analyze_movies()

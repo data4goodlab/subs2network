@@ -1,0 +1,11 @@
+[sframe]
+version=0
+num_segments=0
+num_columns=2
+nrows=115709
+[column_names]
+0000=First Name
+0001=Gender Dict
+[column_files]
+0000=m_5b17d5d125050be5.sidx:0
+0001=m_5b17d5d125050be5.sidx:1

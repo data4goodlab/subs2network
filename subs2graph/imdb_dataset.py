@@ -1,5 +1,5 @@
-from turicreate import SFrame
-from subs2graph.consts import IMDB_RATING_URL, TEMP_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL
+from turicreate import SFrame, SArray
+from subs2graph.consts import IMDB_RATING_URL, TEMP_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL, DATA_PATH
 from subs2graph.utils import download_file
 import turicreate.aggregate as agg
 
@@ -9,7 +9,7 @@ def get_gender(profession):
         return "M"
     if "actress" in profession:
         return "F"
-    return "NA"
+    raise IndexError
 
 
 class IMDbDatasets(object):
@@ -20,6 +20,8 @@ class IMDbDatasets(object):
         self._title = None
         self._actors = None
         self._actors_movies = None
+        self._first_name_gender = None
+        self._actors_gender = None
 
     def get_movie_rating(self, imdb_id):
         try:
@@ -29,7 +31,43 @@ class IMDbDatasets(object):
 
     def get_actor_gender(self, actor):
         try:
-            return self.actors[self.actors["primaryName"] == actor]["gender"][0]
+            return self.actors_gender[actor]
+        except KeyError:
+            try:
+                first_name = actor.split(" ")[0].lower()
+                return self.first_name_gender[first_name]["Gender"][:1]
+            except KeyError:
+                return "U"
+    @property
+    def actors_gender(self):
+        if self._actors_gender is None:
+            self._actors_gender = self.actors[["primaryName", "gender"]].unstack(["primaryName", "gender"])[0]
+        return self._actors_gender
+
+    # def get_actor_gender(self, actor):
+    #     try:
+    #         return get_gender(self.actors[self.actors["primaryName"] == actor]["primaryProfession"][0])
+    #     except IndexError:
+    #         try:
+    #             return self.get_gender_by_name(actor)
+    #         except IndexError:
+    #             return "U"
+
+    def add_actor_gender(self, actor):
+        try:
+            return get_gender(actor["primaryProfession"])
+        except IndexError:
+            try:
+                return self.get_gender_by_name(actor["primaryName"])
+            except IndexError:
+                return "U"
+
+    def get_gender_by_name(self, actor):
+        try:
+            first_name = actor.split(" ")[0].lower()
+            return self.first_name_gender[first_name]["Gender"][0]
+        except KeyError:
+            return None
         except IndexError:
             return None
 
@@ -52,7 +90,7 @@ class IMDbDatasets(object):
                                                                       'count': agg.COUNT()})
             self._actors = self._actors.join(names)
             self._actors = self._actors.sort("averageRating", ascending=False)
-            self._actors["gender"] = self._actors["primaryProfession"].apply(lambda p: get_gender(p))
+            self._actors["gender"] = self._actors.apply(lambda p: self.add_actor_gender(p))
         return self._actors
 
     @property
@@ -90,8 +128,15 @@ class IMDbDatasets(object):
             self._title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t", na_values=["\\N"])
         return self._title
 
+    @property
+    def first_name_gender(self):
+        if self._first_name_gender is None:
+            self._first_name_gender = SFrame(f"{DATA_PATH}/first_names_gender.sframe")
+            self._first_name_gender = self._first_name_gender.unstack(["First Name", "Gender Dict"])[0]["Dict of First Name_Gender Dict"]
+        return self._first_name_gender
+
     def get_movies_data(self):
-        rating = self.rating[self.rating["numVotes"] > 5000].sort("averageRating", ascending=False)
+        rating = self.rating[self.rating["numVotes"] > 5000]
         sf = self.title.join(rating)
         sf = sf[sf["titleType"] == "movie"]
         return sf.sort("averageRating", ascending=False)
@@ -115,6 +160,7 @@ class IMDbDatasets(object):
 
 
 imdb_data = IMDbDatasets()
+# imdb_data.actors
 # isf.title
 # import gzip
 #

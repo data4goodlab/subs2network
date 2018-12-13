@@ -16,10 +16,10 @@ stop-words = "*"
 fuzzywuzzy = {extras = ["speedup"], version = "*"}
 nltk = "*"
 spacy = "*"
-nameparser = "*"
 python-dotenv = "*"
 sendgrid = "*"
-python-dateutil = "*"
+"img2pdf" = "*"
+seaborn = "*"
 
 [dev-packages]
 bumpversion = "==0.5.3"
