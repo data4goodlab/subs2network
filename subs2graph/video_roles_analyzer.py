@@ -13,7 +13,7 @@ import pickle
 from subs2graph.exceptions import CastNotFound
 from subs2graph.utils import to_iterable
 from nltk.corpus import names
-
+import spacy
 
 # import spacy
 
@@ -50,6 +50,8 @@ class VideoRolesAnalyzer(object):
         :return:
         """
         if not os.path.exists(self._roles_path):
+            nlp = spacy.load('en_core_web_sm')
+
             re_possessive = re.compile("(\w+\'s\s+\w+)")
             try:
                 cast_list = self._imdb_movie[IMDB_CAST]
@@ -69,8 +71,13 @@ class VideoRolesAnalyzer(object):
                         if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
                             logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
                             continue
-                        # if role[IMDB_NAME].lower() not in self._ignore_roles:
-                        self._add_role_to_roles_dict(p, role)
+                        doc = nlp(role[IMDB_NAME])
+                        adj = False
+                        for token in doc:
+                            if token.pos_ == "ADJ":
+                                adj = True
+                        if not adj:
+                            self._add_role_to_roles_dict(p, role)
             with open(self._roles_path, "wb") as f:
                 pickle.dump(self._roles_dict, f)
         else:

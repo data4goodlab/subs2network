@@ -150,8 +150,8 @@ def save_graphs_to_csv(graphs_list, csvs_path, sep="\t"):
 def save_graphs_to_json(graphs_list, output_dir):
     for g in graphs_list:
         data = json_graph.node_link_data(g)
-        csv_path = f"{output_dir}/{g.graph[VIDEO_NAME]}.json"
-        with open(csv_path, 'w') as fp:
+        json_path = f"{output_dir}/{g.graph[VIDEO_NAME]}.json"
+        with open(json_path, 'w') as fp:
             json.dump(data, fp)
 
 
@@ -388,6 +388,22 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
         json.dump(json.dumps(additional_data), fp)
 
 
+def get_bechdel_movies():
+    movies = SFrame.read_csv(f"{DATA_PATH}/bechdel_imdb.csv")
+    movies = movies.sort("year", False)
+    for m in movies:
+        try:
+            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+        except UnicodeEncodeError:
+            print(m["tconst"])
+        except SubtitleNotFound:
+            pass
+        except CastNotFound:
+            pass
+
+
 def get_popular_movies():
     movies = imdb_data.get_movies_data()
     for m in movies:
@@ -449,7 +465,7 @@ def get_best_directors():
             pass
 
 
-def generate_actors_files():
+def generate_actors_file():
     actors = imdb_data.actors
     actors = actors[actors["count"] > 5]
     res = []
@@ -460,15 +476,15 @@ def generate_actors_files():
             title = row["primaryTitle"]
             graph_path = f"{TEMP_PATH}/movies/{title}/"
             if os.path.exists(f"{graph_path}/{title}.json"):
-                res.append({**a, **row, **{"path":  os.path.abspath(graph_path)}})
+                res.append({**a, **row, **{"path": os.path.abspath(graph_path)}})
     pd.DataFrame(res).to_csv(f"{TEMP_PATH}/actors.csv")
 
 
 def get_popular_actors():
     actors = imdb_data.actors
     actors = actors[actors["count"] > 5]
-    m_actors = actors[actors['gender']=="M"].head(500)
-    f_actors = actors[actors['gender']=="F"].head(500)
+    m_actors = actors[actors['gender'] == "M"].head(500)
+    f_actors = actors[actors['gender'] == "F"].head(500)
     actors = f_actors.append(m_actors)
     ignore_roles_names = load_black_list()
     for a in actors:
@@ -510,11 +526,11 @@ def generate_blacklist_roles():
 if __name__ == "__main__":
     # generate_blacklist_roles()
     # get_best_directors()
-    actors = imdb_data.actors
-    f_actors = actors[actors["gender"]=="F"]
-    print(len(f_actors[f_actors["count"] > 5]))
+    # actors = imdb_data.actors
+    # f_actors = actors[actors["gender"]=="F"]
+    # print(len(f_actors[f_actors["count"] > 5]))
     # print(actors.to_dataframe().describe())
-
+    test_get_movie("A Nightmare on Elm Street", 2010, "1179056", {"averageRating": 5.2})
     # try:
     #     # print(get_directors_data().head(100))
     #     test_get_movie("The Legend of Zorro", 2005, "0386140", {"averageRating": 5.9})
