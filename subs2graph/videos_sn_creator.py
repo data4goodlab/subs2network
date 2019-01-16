@@ -21,6 +21,7 @@ import traceback
 from turicreate import SFrame
 import turicreate.aggregate as agg
 from nltk.corpus import words
+from nltk.corpus import wordnet
 from nltk.corpus import names
 import shutil
 from subs2graph.imdb_dataset import imdb_data
@@ -506,21 +507,26 @@ def generate_blacklist_roles():
     sf = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list},
                          na_values=["\\N"])
     sf = sf.filter_by(["actor", "actress"], "category")["tconst", "ordering", "characters", "nconst"]
+    sf = sf.join(imdb_data.title[imdb_data.title["titleType"] == "movie"])
     sf = sf.stack("characters", "character")
     sf["character"] = sf["character"].apply(lambda c: c.title())
-    sf = sf.groupby(key_column_names=['character', "nconst"],
+    sf = sf.groupby(key_column_names=['character'],
                     operations={'ordering': agg.AVG("ordering"), 'count': agg.COUNT()})
-    sf = sf[sf['ordering'] > 4]
-    sf = sf.groupby(key_column_names='character',
-                    operations={'averageOrder': agg.AVG("ordering"), 'count': agg.COUNT()})
+    # sf = sf.groupby(key_column_names='character',
+    #                 operations={'averageOrder': agg.AVG("ordering"), 'count': agg.COUNT()})
     sf["name"] = sf["character"].apply(lambda c: c.split(" ")[-1].strip())
     sf = sf.filter_by(names.words(), "name", exclude=True)
     sf = sf.filter_by(surenames, "name", exclude=True)
     sf = sf.filter_by(firstnames, "name", exclude=True)
     sf = sf.sort("count", False)
-    w = [x.title() for x in words.words()]
-    sf = sf[sf['count'] > 11].append(sf[sf['count'] < 10].filter_by(w, "name"))
+    sf.export_csv(f"{TEMP_PATH}/roles2.csv")
+    sf = sf[sf['ordering'] > 3]
+    w = {x.title() for x in wordnet.words()} - set(names.words())
+    sf["set"] = sf["character"].apply(lambda x: x.split(" "))
+    sf["set"] = sf["set"].apply(lambda x: w & set(x))
+    sf = sf[sf['count'] > 11].append(sf[(sf['count'] < 10) & (sf["set"] != [])])
     sf.export_csv(f"{TEMP_PATH}/roles.csv")
+    sf[["character"]].export_csv(f"{TEMP_PATH}/blacklist_roles.csv")
 
 
 if __name__ == "__main__":
@@ -530,8 +536,9 @@ if __name__ == "__main__":
     # f_actors = actors[actors["gender"]=="F"]
     # print(len(f_actors[f_actors["count"] > 5]))
     # print(actors.to_dataframe().describe())
-    test_get_movie("A Nightmare on Elm Street", 2010, "1179056", {"averageRating": 5.2})
-    # try:
+    generate_actors_file()
+    # test_get_movie("A Nightmare on Elm Street", 2010, "1179056", {"averageRating": 5.2})
+    # try: g
     #     # print(get_directors_data().head(100))
     #     test_get_movie("The Legend of Zorro", 2005, "0386140", {"averageRating": 5.9})
     #

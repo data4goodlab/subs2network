@@ -52,7 +52,7 @@ class VideoRolesAnalyzer(object):
         if not os.path.exists(self._roles_path):
             nlp = spacy.load('en_core_web_sm')
 
-            re_possessive = re.compile("(\w+\'s\s+\w+)")
+            re_possessive = re.compile("(\w+\'s\s+\w+|\w+s\'\s+\w+)")
             try:
                 cast_list = self._imdb_movie[IMDB_CAST]
             except KeyError:
@@ -131,7 +131,7 @@ class VideoRolesAnalyzer(object):
         if not txt:
             return matched_roles
 
-        txt = txt[0].strip().lower()
+        txt = txt.strip().lower()
         s = "(%s)" % "|".join([fr"\b{r}\b" for r in self._roles_dict.keys()])
 
         roles_in_text = set(re.findall(s, txt))
