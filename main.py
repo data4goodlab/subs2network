@@ -14,8 +14,8 @@ if __name__ == "__main__":
 
         # get_bechdel_movies()
 
-        test_get_movie("Toy Story", 1995, "0114709",  {"averageRating": 8.3})
-        # get_popular_movies()
+        # test_get_movie("Toy Story", 1995, "0114709",  {"averageRating": 8.3})
+        get_popular_movies()
         # get_best_directors()
     except Exception as e:
         if not DEBUG:
