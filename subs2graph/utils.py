@@ -116,13 +116,13 @@ def delete_movies_results(p):
         path = os.path.join(p, movie)
         if glob.glob(os.path.join(path, f"subtitles/{movie}*roles.pkl")):
             try:
-                shutil.rmtree(os.path.join(path,"json"))
-                shutil.rmtree(os.path.join(path, "graphs"))
-                shutil.rmtree(os.path.join(path, "csv"))
                 os.remove(glob.glob(os.path.join(path, f"subtitles/{movie}*roles.pkl"))[0])
                 os.remove(os.path.join(path, f"{movie}.json"))
             except FileNotFoundError:
                 pass
+        shutil.rmtree(os.path.join(path, "json"))
+        shutil.rmtree(os.path.join(path, "graphs"))
+        shutil.rmtree(os.path.join(path, "csv"))
 
 
 if __name__ == "__main__":
