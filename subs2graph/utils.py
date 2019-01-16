@@ -3,6 +3,7 @@ import logging
 import requests
 import os
 from tqdm import tqdm
+import sys
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, Content
@@ -121,3 +122,5 @@ def delete_movies_results(p):
                 pass
 
 
+if __name__ == "__main__":
+    delete_movies_results(sys.argv[1])
