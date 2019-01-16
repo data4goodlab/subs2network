@@ -58,10 +58,11 @@ class SubtitleAnalyzer(object):
         subs = pysrt.open(subtitle_path)
         subs_entities_timeline_dict = {}
 
-        re_brackets_split = re.compile("\[(.*?)\]")
-
+        re_brackets_split = re.compile("(\[.*?\]|.*?\:|^\(.*?\)$)")
+        # (\[(.* ?)\] | (.* ?)\: | ^ \((.* ?)\)$)
         cc = RemoveControlChars()
         subs_clean = [cc.remove_control_chars(s.text.strip('-\\\/').replace("\n", " ")) for s in subs]
+        subs_clean = [re.sub('<[^<]+?>', '', s) for s in subs_clean]
         brackets = [re_brackets_split.findall(s) for s in subs_clean]
         subs_text = [word_tokenize(s) for s in subs_clean]
         st = StanfordNERTagger(STANFORD_NLP_MODEL,
@@ -76,7 +77,8 @@ class SubtitleAnalyzer(object):
         #     role_counter += self._video_role_analyzer.count_apperence_in_text(e)
         for s, e_n, e_s, b in zip(subs, entities_nltk, entities_spacy, brackets):
             roles = self._video_role_analyzer.find_roles_names_in_text_ner(e_n, e_s)
-            roles.update(self._video_role_analyzer.find_roles_names_in_text(b))
+            for item in b:
+                roles.update(self._video_role_analyzer.find_roles_names_in_text(item))
             # role_counter.update(roles)
             if len(roles) > 0:
                 t = s.start.seconds + s.start.minutes * 60
@@ -142,9 +144,9 @@ class SubtitleAnalyzer(object):
                 edges.append((v1, v2))
         return edges
 
-        @property
-        def imdb_rating(self):
-            return self._video_role_analyzer.rating()
+    @property
+    def imdb_rating(self):
+        return self._video_role_analyzer.rating()
 
 
 if __name__ == "__main__":

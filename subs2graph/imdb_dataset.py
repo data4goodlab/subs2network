@@ -22,6 +22,7 @@ class IMDbDatasets(object):
         self._actors_movies = None
         self._first_name_gender = None
         self._actors_gender = None
+        self._all_actors = None
 
     def get_movie_rating(self, imdb_id):
         try:
@@ -41,7 +42,8 @@ class IMDbDatasets(object):
     @property
     def actors_gender(self):
         if self._actors_gender is None:
-            self._actors_gender = self.actors[["primaryName", "gender"]].unstack(["primaryName", "gender"])[0]
+
+            self._actors_gender = self.all_actors[["primaryName", "gender"]].unstack(["primaryName", "gender"])[0]["Dict of primaryName_gender"]
         return self._actors_gender
 
     # def get_actor_gender(self, actor):
@@ -83,14 +85,17 @@ class IMDbDatasets(object):
             download_file(IMDB_PRINCIPALS_URL, f"{TEMP_PATH}/title.principals.tsv.gz", False)
             self._actors = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", na_values=["\\N"])
             self._actors = self._actors.filter_by(["actor", "actress"], "category")["tconst", "nconst"]
-            names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
+
             self._actors = self._actors.join(
                 self.rating[(self.rating["titleType"] == "movie") & (self.rating["numVotes"] > 5000)])
             self._actors = self._actors.groupby("nconst", operations={'averageRating': agg.AVG("averageRating"),
                                                                       'count': agg.COUNT()})
-            self._actors = self._actors.join(names)
             self._actors = self._actors.sort("averageRating", ascending=False)
+            names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
+
+            self._actors = self._actors.join(names)
             self._actors["gender"] = self._actors.apply(lambda p: self.add_actor_gender(p))
+
         return self._actors
 
     @property
@@ -103,6 +108,17 @@ class IMDbDatasets(object):
             self._actors_movies = self._actors_movies.join(self.title[self.title["titleType"] == "movie"])
             self._actors_movies = self._actors_movies.join(self.actors)
         return self._actors_movies
+
+    @property
+    def all_actors(self):
+        if self._all_actors is None:
+            self._all_actors = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t",
+                                                  na_values=["\\N"])
+            self._all_actors["primaryProfession"] = self._all_actors["primaryProfession"].apply(lambda x: x.split(","))
+            self._all_actors= self._all_actors.stack("primaryProfession", "primaryProfession")
+            self._all_actors = self._all_actors.filter_by(["actor", "actress"], "primaryProfession")
+            self._all_actors["gender"] = self._all_actors.apply(lambda p: self.add_actor_gender(p))
+        return self._all_actors
 
     @property
     def rating(self):

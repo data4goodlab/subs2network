@@ -12,8 +12,10 @@ from subs2graph.imdb_dataset import imdb_data
 def get_node_features(g):
     closeness = nx.closeness_centrality(g)
     betweenness = nx.betweenness_centrality(g)
+    betweenness_weight = nx.betweenness_centrality(g, weight="weight")
     degree_centrality = nx.degree_centrality(g)
-    pr = nx.pagerank(g)
+    pr = nx.pagerank(g, weight=None)
+    pr_weight = nx.pagerank(g, weight="weight")
     clustering = nx.clustering(g)
     for v in g.nodes():
         res = {}
@@ -23,11 +25,14 @@ def get_node_features(g):
         res["year"] = g.graph["movie_year"]
         res["imdb_rating"] = g.graph["imdb_rating"]
         res["closeness"] = closeness[v]
+        res["betweenness_weight"] = betweenness_weight[v]
         res["betweenness"] = betweenness[v]
         res["degree_centrality"] = degree_centrality[v]
         res["clustering"] = clustering[v]
         res["pagerank"] = pr[v]
+        res["pr_weight"] = pr_weight[v]
         res["gender"] = imdb_data.get_actor_gender(v)
+        res["name"] = v
         yield res
 
 
@@ -35,19 +40,23 @@ def get_actor_features(g, actor):
     res = {}
     closeness = nx.closeness_centrality(g)
     betweenness = nx.betweenness_centrality(g)
+    betweenness_weight = nx.betweenness_centrality(g, weight="weight")
     degree_centrality = nx.degree_centrality(g)
     clustering = nx.clustering(g)
-    pr = nx.pagerank(g)
+    pr = nx.pagerank(g, weight=None)
+    pr_weight = nx.pagerank(g)
 
     v = actor
     res["total_weight"] = g.degree(v, weight="weight")
     res["degree"] = g.degree(v)
     res["closeness"] = closeness[v]
     res["betweenness"] = betweenness[v]
+    res["betweenness_weight"] = betweenness_weight[v]
     res["degree_centrality"] = degree_centrality[v]
     res["clustering"] = clustering[v]
     res["movie_rating"] = g.graph["imdb_rating"]
     res["pagerank"] = pr[v]
+    res["pagerank_weight"] = pr_weight[v]
 
     # res["gender"] = imdb_data.get_actor_gender(v)
     return res
@@ -80,14 +89,30 @@ def average_closeness_centrality(g):
 def average_eigenvector_centrality(g):
     stats = pd.Series(list(nx.eigenvector_centrality(g).values())).describe()
     del stats["count"]
-    return add_prefix_to_dict_keys(stats.to_dict(), "closeness")
+    return add_prefix_to_dict_keys(stats.to_dict(), "eigenvector")
 
 
 def average_betweenness_centrality(g):
     stats = pd.Series(list(nx.betweenness_centrality(g).values())).describe()
     del stats["count"]
-    return add_prefix_to_dict_keys(stats.to_dict(), "closeness")
+    return add_prefix_to_dict_keys(stats.to_dict(), "betweenness")
 
+def average_pagerank(g):
+    stats = pd.Series(list(nx. nx.pagerank(g,weight=None).values())).describe()
+    del stats["count"]
+    return add_prefix_to_dict_keys(stats.to_dict(), "pagerank")
+
+def average_weighted_pagerank(g):
+    stats = pd.Series(list(nx. nx.pagerank(g, weight="weight").values())).describe()
+    del stats["count"]
+    return add_prefix_to_dict_keys(stats.to_dict(), "weighted_pagerank")
+
+
+
+def average_weighted_betweenness_centrality(g):
+    stats = pd.Series(list(nx.betweenness_centrality(g).values())).describe()
+    del stats["count"]
+    return add_prefix_to_dict_keys(stats.to_dict(), "weighted_betweenness")
 
 def average_clustering(g):
     try:
@@ -95,6 +120,12 @@ def average_clustering(g):
     except:
         return {"average_clustering": 0}
 
+
+def average_weighted_clustering(g):
+    try:
+        return {"average_weighted_clustering": nx.average_clustering(g, weight="weight")}
+    except:
+        return {"average_clustering": 0}
 
 def graph_clique_number(g):
     return {"clique_number": nx.graph_clique_number(g)}
@@ -113,6 +144,7 @@ def get_node_number(g):
 
 
 def analyze_movies():
+
     p = "../temp/movies/"
     res = []
     for movie in tqdm(os.listdir(p)):
@@ -177,13 +209,12 @@ def analyze_triangles():
     res = []
     json_path = os.path.join(p, "*", "json")
     for g_pth in tqdm(glob.glob(os.path.join(json_path, f"*roles.json"))):
-
         if g_pth:
             with open(g_pth) as f:
                 g = json_graph.node_link_graph(json.load(f))
                 tr = get_triangles(g)
             for t in tr:
-                t.append(g.graph["movie_name"].strip(" - roles"))
+                t.append(g.graph["movie_name"].replace(" - roles",""))
                 t.append(g.graph["movie_year"])
             res += tr
 
@@ -199,7 +230,7 @@ def analyze_genders():
         if g_pth:
             with open(g_pth) as f:
                 g = json_graph.node_link_graph(json.load(f))
-                if g.number_of_nodes() > 9:
+                if g.number_of_nodes() > 5:
                     d = get_node_features(g)
                     res += list(d)
 
@@ -212,8 +243,13 @@ def extract_graph_features(g):
     d.update(get_node_number(g))
     d.update(average_actor_appearance(g))
     d.update(average_closeness_centrality(g))
+    d.update(average_clustering(g))
+    d.update(average_weighted_clustering(g))
     d.update(average_betweenness_centrality(g))
+    d.update(average_weighted_betweenness_centrality(g))
     # d.update(average_eigenvector_centrality(g))
+    d.update(average_pagerank(g))
+    d.update(average_weighted_pagerank(g))
     d.update(average_graph_degree(g))
     d.update(average_graph_weight(g))
     d.update(average_clustering(g))
@@ -258,6 +294,7 @@ def add_gender_to_graph(movie):
     p = "../temp/movies/"
     json_path = os.path.join(p, movie, "json")
     graph_path = glob.glob(os.path.join(json_path, f"*roles*"))[0]
+    imdb_data.actors_gender
     with open(graph_path) as f:
         g = json_graph.node_link_graph(json.load(f))
         for v in g.nodes():
@@ -290,10 +327,10 @@ def get_genders_in_graph(g):
 
 if __name__ == "__main__":
     # gender_in_top_movies()
-    # add_gender_to_graph("Harry Potter and the Goblet of Fire")
+    # add_gender_to_graph("The Matrix")
     # analyze_triangles()
-    # analyze_genders()
+    analyze_genders()
     # analyze_directors()
     # create_pdf()
     # analyze_movies()
-    analyze_movies()
+    # analyze_movies()
