@@ -9,12 +9,36 @@ from sklearn import metrics
 from sklearn.metrics import roc_auc_score
 
 from subs2graph.imdb_dataset import imdb_data
-
+import numpy as np
 
 def split_vals(a, n): return a[:n].copy(), a[n:].copy()
 
 
 def rmse(x, y): return math.sqrt(((x - y) ** 2).mean())
+
+
+genres = {'Action',
+          'Adventure',
+          'Animation',
+          'Biography',
+          'Comedy',
+          'Crime',
+          'Documentary',
+          'Drama',
+          'Family',
+          'Fantasy',
+          'Film-Noir',
+          'History',
+          'Horror',
+          'Music',
+          'Musical',
+          'Mystery',
+          'Romance',
+          'Sci-Fi',
+          'Sport',
+          'Thriller',
+          'War',
+          'Western'}
 
 
 def print_score(m, X_train, y_train, X_valid, y_valid):
@@ -52,7 +76,7 @@ def get_female_in_top_10_roles():
     return female_in_top_10
 
 
-def anlayze_triangles():
+def get_relationship_triangles():
     triangles = SFrame.read_csv(f"{TEMP_PATH}/triangles.csv", usecols=["0", "1", "2", "3", "4"])
     triangles_gender = triangles.apply(
         lambda x: [imdb_data.get_actor_gender(x["0"]), imdb_data.get_actor_gender(x["1"]),
@@ -62,7 +86,32 @@ def anlayze_triangles():
     triangles_gender["year"] = triangles["4"]
     triangles_gender = triangles_gender.dropna()
     triangles_gender = triangles_gender.join(imdb_data.title, {"movie": "primaryTitle", "year": "startYear"})
-    return triangles_gender
+    triangles_gender_bin = SFrame()
+    triangles_gender_bin["1"] = triangles_gender["X.0"] == "M"
+    triangles_gender_bin["2"] = triangles_gender["X.1"] == "M"
+    triangles_gender_bin["3"] = triangles_gender["X.2"] == "M"
+    triangles_gender_bin["total_men"] = triangles_gender_bin["1"] + triangles_gender_bin["2"] + triangles_gender_bin[
+        "3"]
+
+
+    return triangles_gender_bin
+
+
+def count_triangles():
+    triangles_gender_bin = get_relationship_triangles()
+    triangles_gender_bin["genres"] = triangles_gender_bin["genres"].apply(lambda x: x.split(","))
+
+    triangles_df = triangles_gender_bin.to_dataframe()
+    triangles_df = triangles_df[triangles_df["genres"].notnull()]
+    for genre in set().union(*triangles_df.genres.values):
+        triangles_df[genre] = triangles_df.apply(lambda _: int(genre in _.genres), axis=1)
+    triangles_df = triangles_df.drop(["1", "2", "3", "genres"], axis=1)
+    triangles_df = triangles_df.rename(columns={"total_men": "Males in triangle"})
+    piv = pd.pivot_table(triangles_df, columns="Males in triangle", values=genres, aggfunc=np.sum)
+    piv["total"] = piv[0] + piv[1] + piv[2] + piv[3]
+    for i in range(4):
+        piv[i] = piv[i] / piv["total"]
+    return piv
 
 
 class BechdelClassifier(object):
@@ -84,10 +133,10 @@ class BechdelClassifier(object):
             graph_features = graph_features.join(SFrame(get_female_in_top_10_roles()),
                                                  on={"movie_name": "movie_name", "year": "year"})
             self.graph_features = graph_features.join(SFrame(t), on={"movie_name": "movie", "year": "year"})
-            self.graph_features["total_tir"] = self.graph_features["0"] + self.graph_features["1"] + \
+            self.graph_features["total_tri"] = self.graph_features["0"] + self.graph_features["1"] + \
                                                self.graph_features["2"] + self.graph_features["3"]
             for i in range(4):
-                self.graph_features[f"{i}%"] = self.graph_features[str(i)] / self.graph_features["total_tir"]
+                self.graph_features[f"{i}%"] = self.graph_features[str(i)] / self.graph_features["total_tri"]
 
             self.graph_features.save(f"{DATA_PATH}/bechdel_features.csv", "csv")
         self.graph_features = imdb_data.title.filter_by("movie", "titleType").join(self.graph_features,
@@ -98,7 +147,7 @@ class BechdelClassifier(object):
                                               on={"primaryTitle": "primaryTitle", "startYear": "year"}, how='left')
         # bechdel_triangles = SFrame(traingles_at_movie).join(self.bechdel_imdb, {"tconst": "tconst"})
 
-        bechdel_ml = bechdel_ml[bechdel_ml["genres"]!=None]
+        bechdel_ml = bechdel_ml[bechdel_ml["genres"] != None]
         bechdel_ml = bechdel_ml.to_dataframe()
         bechdel_ml["genres"] = bechdel_ml.genres.str.split(",")
         for genre in set().union(*bechdel_ml.genres.values):
@@ -115,7 +164,7 @@ class BechdelClassifier(object):
         self.X_train = train.drop(
             ["X1", "genres", "imdbid", "originalTitle", 'endYear', 'isAdult', 'tconst',
              'titleType', 'tconst.1', 'titleType.1', 'originalTitle.1', 'isAdult.1', 'startYear.1', 'endYear.1',
-             'runtimeMinutes.1', 'genres.1','primaryTitle',
+             'runtimeMinutes.1', 'genres.1', 'primaryTitle',
              'X1',
              'id',
              'imdbid',
@@ -123,20 +172,20 @@ class BechdelClassifier(object):
         self.val = val.drop(
             ["X1", "genres", "imdbid", "originalTitle", 'endYear', 'isAdult', 'tconst',
              'titleType', 'tconst.1', 'titleType.1', 'originalTitle.1', 'isAdult.1', 'startYear.1', 'endYear.1',
-             'runtimeMinutes.1', 'genres.1','primaryTitle',
+             'runtimeMinutes.1', 'genres.1', 'primaryTitle',
              'X1',
              'id',
-             'imdbid','rating',
+             'imdbid', 'rating',
              'id'], axis=1)
         self.y = self.X_train.pop("rating")
         # bechdel_imdb_rating[(bechdel_imdb_rating["numVotes"] > 5000) & (bechdel_imdb_rating["titleType"] == "movie")][1000:]
 
     def triangles(self):
-        triagles_gender = anlayze_triangles()
-        triagles_gender["1"] = triagles_gender["X.0"] == "M"
-        triagles_gender["2"] = triagles_gender["X.1"] == "M"
-        triagles_gender["3"] = triagles_gender["X.2"] == "M"
-        triagles_gender["total"] = triagles_gender["1"] + triagles_gender["2"] + triagles_gender["3"]
+        triagles_gender = get_relationship_triangles()
+        # triagles_gender["1"] = triagles_gender["X.0"] == "M"
+        # triagles_gender["2"] = triagles_gender["X.1"] == "M"
+        # triagles_gender["3"] = triagles_gender["X.2"] == "M"
+        # triagles_gender["total"] = triagles_gender["1"] + triagles_gender["2"] + triagles_gender["3"]
 
         moive_triangle = triagles_gender.groupby(["movie", "year", "total"], operations={'count': agg.COUNT()})
         # type(moive_triangle)
@@ -165,13 +214,17 @@ class BechdelClassifier(object):
         return self.clf
 
 
-b = BechdelClassifier()
-b.build_dataset()
-# print(b.train_test())
-rfc = b.train()
-v = rfc.predict_proba(b.val)[:, 1]
-print(v.mean())
-for y, d in b.val.groupby("startYear"):
-    if len(d) > 10:
-        v = rfc.predict_proba(d)[:, 1]
-        print(y, v.mean())
+if __name__ == "__main__":
+    count_triangles()
+    b = BechdelClassifier()
+    b.build_dataset()
+    # print(b.train_test())
+    rfc = b.train()
+    v = rfc.predict_proba(b.val)[:, 1]
+    print(v.mean())
+    b.val["decade"] = b.val["startYear"] // 10
+    for y, d in b.val.groupby("decade"):
+        if len(d) > 10:
+            d.pop("decade")
+            v = rfc.predict_proba(d)[:, 1]
+            print(y, v.mean(), len(d))

@@ -396,7 +396,7 @@ def get_bechdel_movies():
     for m in movies:
         try:
             movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/json/{movie_name} - roles.json"):
                 test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
         except UnicodeEncodeError:
             print(m["tconst"])

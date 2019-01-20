@@ -15,6 +15,7 @@ from subs2graph.utils import to_iterable
 from nltk.corpus import names
 import spacy
 
+
 # import spacy
 
 
@@ -37,10 +38,10 @@ class VideoRolesAnalyzer(object):
         if self._roles_path is None or not os.path.exists(self._roles_path):
             self._imdb_movie = IMDb().get_movie(imdb_id)
             with open(self._roles_path, "wb") as f:
-                pickle.dump(self._roles_dict, f)
+                pickle.dump(self._imdb_movie, f)
         else:
             with open(self._roles_path, "rb") as f:
-                self._roles_dict = pickle.load(f)
+                self._imdb_movie = pickle.load(f)
         self._stop_words_english = set(stop_words.get_stop_words("english")) - set([n.lower() for n in names.words()])
         self._use_top_k_roles = {}
         self._ignore_roles_names = set(ignore_roles_names)
