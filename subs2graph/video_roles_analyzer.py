@@ -36,6 +36,11 @@ class VideoRolesAnalyzer(object):
             self._roles_path = roles_path
         if self._roles_path is None or not os.path.exists(self._roles_path):
             self._imdb_movie = IMDb().get_movie(imdb_id)
+            with open(self._roles_path, "wb") as f:
+                pickle.dump(self._roles_dict, f)
+        else:
+            with open(self._roles_path, "rb") as f:
+                self._roles_dict = pickle.load(f)
         self._stop_words_english = set(stop_words.get_stop_words("english")) - set([n.lower() for n in names.words()])
         self._use_top_k_roles = {}
         self._ignore_roles_names = set(ignore_roles_names)
@@ -49,40 +54,35 @@ class VideoRolesAnalyzer(object):
         :param remove_possessives: remove roles name which contains possessives, such as Andy's Wife
         :return:
         """
-        if not os.path.exists(self._roles_path):
-            nlp = spacy.load('en_core_web_sm')
 
-            re_possessive = re.compile("(\w+\'s\s+\w+|\w+s\'\s+\w+)")
-            try:
-                cast_list = self._imdb_movie[IMDB_CAST]
-            except KeyError:
-                raise CastNotFound
-            if use_top_k_roles is not None:
-                cast_list = cast_list[:use_top_k_roles]
+        nlp = spacy.load('en_core_web_sm')
 
-            for p in cast_list:
-                for role in to_iterable(p.currentRole):
+        re_possessive = re.compile("(\w+\'s\s+\w+|\w+s\'\s+\w+)")
+        try:
+            cast_list = self._imdb_movie[IMDB_CAST]
+        except KeyError:
+            raise CastNotFound
+        if use_top_k_roles is not None:
+            cast_list = cast_list[:use_top_k_roles]
 
-                    if role.notes == '(uncredited)':
-                        break
-                    if role is None or IMDB_NAME not in role.keys():
-                        logging.warning("Could not find current role for %s" % str(p))
-                    else:
-                        if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
-                            logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
-                            continue
-                        doc = nlp(role[IMDB_NAME])
-                        adj = False
-                        for token in doc:
-                            if token.pos_ == "ADJ":
-                                adj = True
-                        if not adj:
-                            self._add_role_to_roles_dict(p, role)
-            with open(self._roles_path, "wb") as f:
-                pickle.dump(self._roles_dict, f)
-        else:
-            with open(self._roles_path, "rb") as f:
-                self._roles_dict = pickle.load(f)
+        for p in cast_list:
+            for role in to_iterable(p.currentRole):
+
+                if role.notes == '(uncredited)':
+                    break
+                if role is None or IMDB_NAME not in role.keys():
+                    logging.warning("Could not find current role for %s" % str(p))
+                else:
+                    if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
+                        logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
+                        continue
+                    doc = nlp(role[IMDB_NAME])
+                    adj = False
+                    for token in doc:
+                        if token.pos_ == "ADJ":
+                            adj = True
+                    if not adj:
+                        self._add_role_to_roles_dict(p, role)
 
     def _add_role_to_roles_dict(self, person, role):
         role_name = role[IMDB_NAME]

@@ -392,7 +392,7 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
 def get_bechdel_movies():
     movies = SFrame.read_csv(f"{DATA_PATH}/bechdel_imdb.csv")
     movies = movies.sort("year", False)
-    for m in movies:
+    movies = movies.filter_by("movie", "tit    for m in movies:
         try:
             movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
             if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):

@@ -120,9 +120,9 @@ def delete_movies_results(p):
                 os.remove(os.path.join(path, f"{movie}.json"))
             except FileNotFoundError:
                 pass
-        shutil.rmtree(os.path.join(path, "json"))
-        shutil.rmtree(os.path.join(path, "graphs"))
-        shutil.rmtree(os.path.join(path, "csv"))
+        shutil.rmtree(os.path.join(path, "json"), ignore_errors=True)
+        shutil.rmtree(os.path.join(path, "graphs"), ignore_errors=True)
+        shutil.rmtree(os.path.join(path, "csv"), ignore_errors=True)
 
 
 if __name__ == "__main__":
