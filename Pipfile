@@ -20,6 +20,7 @@ python-dotenv = "*"
 sendgrid = "*"
 "img2pdf" = "*"
 seaborn = "*"
+pip = "*"
 
 [dev-packages]
 bumpversion = "==0.5.3"

@@ -119,7 +119,7 @@ class SubtitleAnalyzer(object):
                 if r in g.node:
                     g.node[r]["last"] = t
                 else:
-                    g.add_node(r, **{"first": t, "last": t})
+                    g.add_node(r, **{"first": t, "last": t, "role":role[1-i][IMDB_NAME]})
 
     @staticmethod
     def update_interaction(graphs, roles, t, weights):

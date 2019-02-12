@@ -7,7 +7,7 @@ import pandas as pd
 
 from subs2graph.utils import add_prefix_to_dict_keys
 from subs2graph.imdb_dataset import imdb_data
-
+from subs2graph.consts import MOVIE_YEAR
 
 def get_node_features(g):
     closeness = nx.closeness_centrality(g)
@@ -257,7 +257,7 @@ def extract_graph_features(g):
     genders = get_genders_in_graph(g)
     d["m_count"] = genders.count("M")
     d["f_count"] = genders.count("F")
-    d["movie_name"] = g.graph["movie_name"]
+    d["movie_name"] = g.graph["movie_name"].replace(" - roles","")
     d["year"] = g.graph["movie_year"]
     d["imdb_rating"] = g.graph["imdb_rating"]
     return d
@@ -290,19 +290,26 @@ def create_pdf():
     res[0].save("test4.pdf", "PDF", resolution=100.0, save_all=True, append_images=res[1:], quality=60, optimize=True)
 
 
-def add_gender_to_graph(movie):
+def add_gender_to_graph(movie, is_roles=True):
     p = "../temp/movies/"
     json_path = os.path.join(p, movie, "json")
-    graph_path = glob.glob(os.path.join(json_path, f"*roles*"))[0]
+    if is_roles:
+        graph_paths = glob.glob(os.path.join(json_path, f"*roles*"))[0]
+    else:
+        graph_paths = glob.glob(os.path.join(json_path, f"*{movie}.json"))
     imdb_data.actors_gender
-    with open(graph_path) as f:
-        g = json_graph.node_link_graph(json.load(f))
-        for v in g.nodes():
-            g.node[v]["gender"] = imdb_data.get_actor_gender(v)
-    data = json_graph.node_link_data(g)
-    json_path = f"../temp/{movie}.json"
-    with open(json_path, 'w') as fp:
-        json.dump(data, fp)
+    for graph_path in graph_paths:
+        with open(graph_path) as f:
+            g = json_graph.node_link_graph(json.load(f))
+            for v in g.nodes():
+                if is_roles:
+                    g.node[v]["gender"] = imdb_data.get_actor_gender(v)
+                else:
+                    g.node[v]["gender"] = imdb_data.get_actor_gender(g.node[v]['role'])
+        data = json_graph.node_link_data(g)
+        json_path = f"../temp/({g.graph[MOVIE_YEAR]}) - {movie}.json"
+        with open(json_path, 'w') as fp:
+            json.dump(data, fp)
 
 
 def gender_in_top_movies():
@@ -327,10 +334,10 @@ def get_genders_in_graph(g):
 
 if __name__ == "__main__":
     # gender_in_top_movies()
-    # add_gender_to_graph("The Matrix")
+    add_gender_to_graph("The Social Network", False)
     # analyze_triangles()
-    analyze_genders()
+    # analyze_genders()
     # analyze_directors()
     # create_pdf()
     # analyze_movies()
-    # analyze_movies()
+    analyze_movies()

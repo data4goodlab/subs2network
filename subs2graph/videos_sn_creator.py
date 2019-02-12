@@ -135,9 +135,9 @@ def save_graphs_features(graphs_list, features_path, remove_unintresting_feature
         f.write("\n".join(csv_lines))
 
 
-def save_graphs_to_csv(graphs_list, csvs_path, sep="\t"):
+def save_graphs_to_csv(graphs_list, csv_folder, sep="\t"):
     for g in graphs_list:
-        csv_path = f"{csvs_path}/{g.graph[VIDEO_NAME]}.csv"
+        csv_path = f"{csv_folder}/({g.graph[MOVIE_YEAR]}) -  {g.graph[VIDEO_NAME]}.csv"
 
         if SERIES_NAME in g.graph:
             save_episode_graph_to_csv(g, g.graph[SERIES_NAME], g.graph[SEASON_NUMBER], g.graph[EPISODE_NUMBER],
@@ -151,14 +151,14 @@ def save_graphs_to_csv(graphs_list, csvs_path, sep="\t"):
 def save_graphs_to_json(graphs_list, output_dir):
     for g in graphs_list:
         data = json_graph.node_link_data(g)
-        json_path = f"{output_dir}/{g.graph[VIDEO_NAME]}.json"
+        json_path = f"{output_dir}/({g.graph[MOVIE_YEAR]}) - {g.graph[VIDEO_NAME]}.json"
         with open(json_path, 'w') as fp:
             json.dump(data, fp)
 
 
 def draw_graphs(graphs_list, figures_path, output_format="png"):
     for g in graphs_list:
-        draw_outpath = f"{figures_path}/{g.graph[VIDEO_NAME]}.{output_format}"
+        draw_outpath = f"{figures_path}/({g.graph[MOVIE_YEAR]}) - {g.graph[VIDEO_NAME]}.{output_format}"
         draw_graph(g, draw_outpath)
 
 
@@ -195,9 +195,9 @@ def get_episode_graph(name, series_name, season_number, episode_number, episode_
 
 
 def _get_movie_video_sn_analyzer(name, title, year, imdb_id, subtitles_path, use_top_k_roles,
-                                 timeelaps_seconds, rating=None, ignore_roles_names=None):
+                                 timelaps_seconds, rating=None, ignore_roles_names=None):
     movie = get_movie_obj(name, title, year, imdb_id)
-    return _fetch_and_analyze_subtitle(movie, subtitles_path, use_top_k_roles, timeelaps_seconds, rating,
+    return _fetch_and_analyze_subtitle(movie, subtitles_path, use_top_k_roles, timelaps_seconds, rating,
                                        ignore_roles_names=ignore_roles_names)
 
 
@@ -381,11 +381,11 @@ def test_get_movie(movie_title, year, imdb_id, additional_data=None):
     create_dirs("movies", movie_title)
     graphs = get_movie_graph(f"{movie_title} ({year})", movie_title, year, imdb_id,
                              f"{TEMP_PATH}/movies/{movie_title}/subtitles", use_top_k_roles=None,
-                             min_weight=5, rating=rating, ignore_roles_names=load_black_list())
+                             min_weight=3, rating=rating, ignore_roles_names=load_black_list())
 
     save_output(graphs, "movies", movie_title)
 
-    with open(f"{TEMP_PATH}/movies/{movie_title}/{movie_title}.json", 'w') as fp:
+    with open(f"{TEMP_PATH}/movies/{movie_title}/({year}) - {movie_title}.json", 'w') as fp:
         json.dump(json.dumps(additional_data), fp)
 
 
@@ -393,62 +393,48 @@ def get_bechdel_movies():
     movies = SFrame.read_csv(f"{DATA_PATH}/bechdel_imdb.csv")
     movies = movies.sort("year", False)
     movies = movies.filter_by("movie", "titleType")
-    for m in movies:
-        try:
-            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/json/{movie_name} - roles.json"):
-                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
-        except UnicodeEncodeError:
-            print(m["tconst"])
-        except SubtitleNotFound:
-            pass
-        except CastNotFound:
-            pass
+    download_movies(movies)
 
 
 def get_popular_movies():
     movies = imdb_data.get_movies_data()
-    for m in movies:
-        try:
-            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
-                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
-        except UnicodeEncodeError:
-            print(m["tconst"])
-        except SubtitleNotFound:
-            pass
-        except CastNotFound:
-            pass
+    download_movies(movies)
 
 
 def get_best_movies():
     movies = imdb_data.get_movies_data().head(1000)
-    for m in movies:
+    download_movies(movies)
+
+
+def download_movies(movies_sf, overwrite=False):
+    for m in movies_sf:
         try:
             movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
+            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/json/{movie_name} - roles.json") or overwrite:
                 test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+            else:
+                print(f"{movie_name} Already Exists")
         except UnicodeEncodeError:
             print(m["tconst"])
         except SubtitleNotFound:
             pass
         except CastNotFound:
             pass
+
+
+def get_movies_by_character(character, overwrite=False):
+    movies = imdb_data.get_movies_by_character(character)
+    download_movies(movies, overwrite)
+
+
+def get_movies_by_title(title, overwrite=False):
+    movies = imdb_data.get_movies_by_title(title)
+    download_movies(movies, overwrite)
 
 
 def get_worst_movies():
     movies = imdb_data.get_movies_data().tail(1000)
-    for m in movies:
-        try:
-            movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/{movie_name}.json"):
-                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
-        except UnicodeEncodeError:
-            print(m["tconst"])
-        except SubtitleNotFound:
-            pass
-        except CastNotFound:
-            pass
+    download_movies(movies)
 
 
 def get_best_directors():
@@ -468,7 +454,7 @@ def get_best_directors():
 
 
 def generate_actors_file():
-    actors = imdb_data.actors
+    actors = imdb_data.popular_actors
     actors = actors[actors["count"] > 5]
     res = []
     for a in tqdm(actors):
@@ -483,7 +469,7 @@ def generate_actors_file():
 
 
 def get_popular_actors():
-    actors = imdb_data.actors
+    actors = imdb_data.popular_actors
     actors = actors[actors["count"] > 5]
     m_actors = actors[actors['gender'] == "M"].head(500)
     f_actors = actors[actors['gender'] == "F"].head(500)
@@ -511,6 +497,10 @@ def generate_blacklist_roles():
     sf = sf.join(imdb_data.title[imdb_data.title["titleType"] == "movie"])
     sf = sf.stack("characters", "character")
     sf["character"] = sf["character"].apply(lambda c: c.title())
+    whitelist = sf.groupby(key_column_names=['character', "nconst"],
+                           operations={'count': agg.COUNT()})
+    whitelist = whitelist[whitelist["count"] > 1]['character']
+    sf = sf.filter_by(whitelist, "character", True)
     sf = sf.groupby(key_column_names=['character'],
                     operations={'ordering': agg.AVG("ordering"), 'count': agg.COUNT()})
     # sf = sf.groupby(key_column_names='character',
@@ -522,10 +512,10 @@ def generate_blacklist_roles():
     sf = sf.sort("count", False)
     sf.export_csv(f"{TEMP_PATH}/roles2.csv")
     sf = sf[sf['ordering'] > 3]
-    w = {x.title() for x in wordnet.words()} - set(names.words())
+    w = {x.replace("_"," ").title() for x in wordnet.words()} - set(names.words())
     sf["set"] = sf["character"].apply(lambda x: x.split(" "))
     sf["set"] = sf["set"].apply(lambda x: w & set(x))
-    sf = sf[sf['count'] > 11].append(sf[(sf['count'] < 10) & (sf["set"] != [])])
+    sf = sf[sf['count'] > 11].append(sf[(sf['count'] > 1) & (sf['count'] < 10) & (sf["set"] != [])])
     sf.export_csv(f"{TEMP_PATH}/roles.csv")
     sf[["character"]].export_csv(f"{TEMP_PATH}/blacklist_roles.csv")
 

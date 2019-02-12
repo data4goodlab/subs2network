@@ -43,7 +43,7 @@ def get_movie_obj(name, title, year, imdb_id):
     :rtype: video.Movie
     """
     logging.info("Fetching Subtitle For Movie:%s | Year: %s | IMDB ID: %s " % (title, year, imdb_id))
-    return video.Movie(name=name, title=title, year=year, imdb_id=imdb_id)
+    return video.Movie( name=name, title=title, year=year, imdb_id=imdb_id)
 
 
 def get_episode_obj(video_name, series, season_num, episode_num, episode_name, imdb_id):

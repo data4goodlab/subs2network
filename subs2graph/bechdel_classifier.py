@@ -86,20 +86,20 @@ def get_relationship_triangles():
     triangles_gender["year"] = triangles["4"]
     triangles_gender = triangles_gender.dropna()
     triangles_gender = triangles_gender.join(imdb_data.title, {"movie": "primaryTitle", "year": "startYear"})
-    triangles_gender_bin = SFrame()
-    triangles_gender_bin["1"] = triangles_gender["X.0"] == "M"
-    triangles_gender_bin["2"] = triangles_gender["X.1"] == "M"
-    triangles_gender_bin["3"] = triangles_gender["X.2"] == "M"
-    triangles_gender_bin["total_men"] = triangles_gender_bin["1"] + triangles_gender_bin["2"] + triangles_gender_bin[
+
+    triangles_gender["1"] = triangles_gender["X.0"] == "M"
+    triangles_gender["2"] = triangles_gender["X.1"] == "M"
+    triangles_gender["3"] = triangles_gender["X.2"] == "M"
+    triangles_gender["total_men"] = triangles_gender["1"] + triangles_gender["2"] + triangles_gender[
         "3"]
 
+    triangles_gender["genres"] = triangles_gender["genres"].apply(lambda x: x.split(","))
 
-    return triangles_gender_bin
+    return triangles_gender
 
 
 def count_triangles():
     triangles_gender_bin = get_relationship_triangles()
-    triangles_gender_bin["genres"] = triangles_gender_bin["genres"].apply(lambda x: x.split(","))
 
     triangles_df = triangles_gender_bin.to_dataframe()
     triangles_df = triangles_df[triangles_df["genres"].notnull()]
@@ -215,7 +215,7 @@ class BechdelClassifier(object):
 
 
 if __name__ == "__main__":
-    count_triangles()
+    # count_triangles()
     b = BechdelClassifier()
     b.build_dataset()
     # print(b.train_test())
@@ -228,3 +228,13 @@ if __name__ == "__main__":
             d.pop("decade")
             v = rfc.predict_proba(d)[:, 1]
             print(y, v.mean(), len(d))
+
+    for g in genres:
+        print(f"{g}:")
+        x = b.val.iloc[b.val[g].nonzero()]
+        for y, d in x.groupby("decade"):
+            if len(d) > 10:
+                d.pop("decade")
+                v = rfc.predict_proba(d)[:, 1]
+                print(y, v.mean(), len(d))
+

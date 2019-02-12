@@ -87,8 +87,8 @@ class VideoSnAnalyzer(object):
                             for u, v, d in g.edges(data=True)])
 
         nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels)
-
-        nx.draw(g, pos, node_size=500, edge_cmap=plt.cm.Reds, with_labels=True)
+        g_df = g.to_pandas_dataframe()
+        nx.draw(g, pos, node_size=500, node_color=g_df['gender'], edge_cmap=plt.cm.Reds, with_labels=True)
         plt.savefig(outpath)
         plt.close()
 
