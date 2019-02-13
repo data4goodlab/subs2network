@@ -27,6 +27,7 @@ import shutil
 from subs2graph.imdb_dataset import imdb_data
 from distutils.dir_util import copy_tree
 from tqdm import tqdm
+import glob
 
 logging.basicConfig(level=logging.ERROR)
 import pandas as pd
@@ -410,7 +411,7 @@ def download_movies(movies_sf, overwrite=False):
     for m in movies_sf:
         try:
             movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
-            if not os.path.exists(f"{TEMP_PATH}/movies/{movie_name}/json/{movie_name} - roles.json") or overwrite:
+            if not glob.glob(f"{TEMP_PATH}/movies/{movie_name}/json/*{movie_name} - roles.json") or overwrite:
                 test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
             else:
                 print(f"{movie_name} Already Exists")
@@ -512,7 +513,7 @@ def generate_blacklist_roles():
     sf = sf.sort("count", False)
     sf.export_csv(f"{TEMP_PATH}/roles2.csv")
     sf = sf[sf['ordering'] > 3]
-    w = {x.replace("_"," ").title() for x in wordnet.words()} - set(names.words())
+    w = {x.replace("_", " ").title() for x in wordnet.words()} - set(names.words())
     sf["set"] = sf["character"].apply(lambda x: x.split(" "))
     sf["set"] = sf["set"].apply(lambda x: w & set(x))
     sf = sf[sf['count'] > 11].append(sf[(sf['count'] > 1) & (sf['count'] < 10) & (sf["set"] != [])])

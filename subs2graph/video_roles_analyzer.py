@@ -77,7 +77,7 @@ class VideoRolesAnalyzer(object):
 
         nlp = spacy.load('en_core_web_sm')
 
-        re_possessive = re.compile("(\w+\'s\s+\w+|\w+s\'\s+\w+)")
+        re_possessive = re.compile(r"(\w+\'s\s+\w+|\w+s\'\s+\w+)")
         try:
             cast_list = self._imdb_movie[IMDB_CAST]
         except KeyError:
@@ -113,7 +113,7 @@ class VideoRolesAnalyzer(object):
         if role_name in self._ignore_roles_names:
             return
         n = str(role_name).strip().lower().replace('"', '')
-        re_white_space = re.compile(r"\b([^\s][\D].*?)\b")
+        re_white_space = re.compile(r"\b([^\d\W].*?)\b")
         re_apost_name = re.compile(r"^'(.*?)'$")
         # re_split = re.compile(r"([\w-].*?)")
 
