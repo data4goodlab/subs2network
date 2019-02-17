@@ -18,7 +18,7 @@ if __name__ == "__main__":
         # get_movies_by_character("James Bond", True)
         # get_movies_by_title("Star Wars", True)
         # test_get_movie("The Phantom of the Opera at the Royal Albert Hall", 2011, "2077886",  {"averageRating": 8.8})
-        get_popular_movies()
+        get_popular_movies(resume=True)
         # get_best_directors()
     except Exception as e:
         if not DEBUG:

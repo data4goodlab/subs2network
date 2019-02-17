@@ -397,9 +397,9 @@ def get_bechdel_movies():
     download_movies(movies)
 
 
-def get_popular_movies():
+def get_popular_movies(resume=False):
     movies = imdb_data.get_movies_data()
-    download_movies(movies)
+    download_movies(movies, resume=resume)
 
 
 def get_best_movies():
@@ -407,14 +407,17 @@ def get_best_movies():
     download_movies(movies)
 
 
-def download_movies(movies_sf, overwrite=False):
-    for m in movies_sf:
+def download_movies(movies_sf, overwrite=False, resume=False):
+    resume_id = 0
+    if resume:
+        movies_sf = movies_sf.add_row_number()
+        last_m = sorted([(f, os.path.getmtime(f"{TEMP_PATH}/movies/{f}")) for f in os.listdir(f"{TEMP_PATH}/movies/")],key=lambda x: x[1])[0][0]
+        resume_id = movies_sf[movies_sf["primaryTitle"] == last_m]["id"][0]
+    for m in movies_sf[resume_id:]:
         try:
             movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
             if not glob.glob(f"{TEMP_PATH}/movies/{movie_name}/json/*{movie_name} - roles.json") or overwrite:
-                import cProfile
-                cProfile.runctx('test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)',globals(), locals())
-                # test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
             else:
                 print(f"{movie_name} Already Exists")
         except UnicodeEncodeError:
