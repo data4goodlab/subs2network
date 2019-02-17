@@ -412,15 +412,17 @@ def download_movies(movies_sf, overwrite=False):
         try:
             movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
             if not glob.glob(f"{TEMP_PATH}/movies/{movie_name}/json/*{movie_name} - roles.json") or overwrite:
-                test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
+                import cProfile
+                cProfile.runctx('test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)',globals(), locals())
+                # test_get_movie(movie_name, m["startYear"], m["tconst"].strip("t"), m)
             else:
                 print(f"{movie_name} Already Exists")
         except UnicodeEncodeError:
             print(m["tconst"])
         except SubtitleNotFound:
-            pass
+            print(f"{movie_name} Subtitles Not Found")
         except CastNotFound:
-            pass
+            print(f"{movie_name} Cast Not Found")
 
 
 def get_movies_by_character(character, overwrite=False):
