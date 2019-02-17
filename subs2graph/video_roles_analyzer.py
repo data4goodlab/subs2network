@@ -84,7 +84,10 @@ class VideoRolesAnalyzer(object):
             raise CastNotFound
         if use_top_k_roles is not None:
             cast_list = cast_list[:use_top_k_roles]
-        tmdb_cast = self.get_tmdb_cast()
+        try:
+            tmdb_cast = self.get_tmdb_cast()
+        except:
+            tmdb_cast = {}
         for p in cast_list:
             for role in to_iterable(p.currentRole):
                 # if p[IMDB_NAME] in tmdb_cast:

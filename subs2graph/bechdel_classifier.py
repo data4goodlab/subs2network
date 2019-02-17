@@ -11,6 +11,7 @@ from sklearn.metrics import roc_auc_score
 from subs2graph.imdb_dataset import imdb_data
 import numpy as np
 
+
 def split_vals(a, n): return a[:n].copy(), a[n:].copy()
 
 
@@ -206,12 +207,21 @@ class BechdelClassifier(object):
 
         self.clf.fit(X_train, y_train)
         # print_score(self.clf, X_train, y_train, X_valid, y_valid)
+        # from sklearn.metrics import f1_score
+        # y_pred = self.clf.predict(X_valid)
+        # print(f1_score(y_valid, y_pred, average='macro'))
+        # print(f1_score(y_valid, y_pred, average='micro'))
+        # print(f1_score(y_valid,y_valid, y_pred, average='weighted'))
+        # print(f1_score(y_valid, y_pred, average=None))
         return roc_auc_score(y_valid, self.clf.predict_proba(X_valid)[:, 1])
 
     def train(self):
         self.clf = RandomForestClassifier(n_jobs=-1, n_estimators=100, max_depth=5, random_state=1)
         self.clf.fit(self.X_train, self.y)
         return self.clf
+
+    def dataset_to_csv(self, path):
+        pd.concat([self.X_train, self.y], axis=1).to_csv(path, index=False)
 
 
 if __name__ == "__main__":
@@ -237,4 +247,3 @@ if __name__ == "__main__":
                 d.pop("decade")
                 v = rfc.predict_proba(d)[:, 1]
                 print(y, v.mean(), len(d))
-

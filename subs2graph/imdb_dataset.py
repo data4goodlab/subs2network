@@ -159,7 +159,7 @@ class IMDbDatasets(object):
         return self._first_name_gender
 
     def get_movies_data(self):
-        rating = self.rating[self.rating["numVotes"] > 5000]
+        rating = self.rating[self.rating["numVotes"] > 1000]
         sf = self.title.join(rating)
         sf = sf[sf["titleType"] == "movie"]
         return sf.sort("averageRating", ascending=False)
