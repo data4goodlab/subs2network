@@ -411,7 +411,8 @@ def download_movies(movies_sf, overwrite=False, resume=False):
     resume_id = 0
     if resume:
         movies_sf = movies_sf.add_row_number()
-        last_m = sorted([(f, os.path.getmtime(f"{TEMP_PATH}/movies/{f}")) for f in os.listdir(f"{TEMP_PATH}/movies/")],key=lambda x: x[1])[0][0]
+        last_m = sorted([(f, os.path.getmtime(f"{TEMP_PATH}/movies/{f}")) for f in os.listdir(f"{TEMP_PATH}/movies/")],
+                        key=lambda x: x[1])[0][0]
         resume_id = movies_sf[movies_sf["primaryTitle"] == last_m]["id"][0]
     for m in movies_sf[resume_id:]:
         try:
@@ -463,21 +464,25 @@ def generate_actors_file():
     actors = imdb_data.popular_actors
     actors = actors[actors["count"] > 5]
     res = []
-    for a in tqdm(actors):
+    actors = actors.join(imdb_data.actors_movies, "nconst")
+    for row in tqdm(actors):
 
-        nconst = a["nconst"]
-        for row in imdb_data.get_actor_movies(nconst):
-            title = row["primaryTitle"]
-            graph_path = f"{TEMP_PATH}/movies/{title}/"
-            if os.path.exists(f"{graph_path}/{title}.json"):
-                res.append({**a, **row, **{"path": os.path.abspath(graph_path)}})
+        title = row["primaryTitle"]
+
+        graph_path = f"{TEMP_PATH}/movies/{title}/"
+        try:
+            if glob.glob(f"{graph_path}/*{title}.json"):
+                res.append({**row, **{"path": os.path.abspath(graph_path)}})
+        except:
+            pass
+
     pd.DataFrame(res).to_csv(f"{TEMP_PATH}/actors.csv")
 
 
 def get_popular_actors():
     actors = imdb_data.popular_actors
     actors = actors[actors["count"] > 5]
-    m_actors = actors[actors['gender'] == "M"].head(500)
+    m_actors = actors[actors['gender'] == "M"].head(500)generate_actors_file
     f_actors = actors[actors['gender'] == "F"].head(500)
     actors = f_actors.append(m_actors)
     ignore_roles_names = load_black_list()

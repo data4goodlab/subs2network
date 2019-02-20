@@ -334,10 +334,10 @@ def get_genders_in_graph(g):
 
 if __name__ == "__main__":
     # gender_in_top_movies()
-    add_gender_to_graph("The Social Network", False)
-    # analyze_triangles()
+    # add_gender_to_graph("The Social Network", False)
+    analyze_triangles()
     # analyze_genders()
     # analyze_directors()
     # create_pdf()
     # analyze_movies()
-    analyze_movies()
+    # analyze_movies()
