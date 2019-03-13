@@ -4,7 +4,7 @@ from turicreate import aggregate as agg
 import pandas as pd
 import math
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-
+from sklearn.metrics import precision_score, recall_score
 from sklearn import metrics
 from sklearn.metrics import roc_auc_score
 
@@ -129,7 +129,7 @@ class BechdelClassifier(object):
             self.graph_features = SFrame.read_csv(f"{DATA_PATH}/bechdel_features.csv")
         except:
             t = self.triangles()
-            graph_features = SFrame.read_csv("../temp/graph_features.csv")
+            graph_features = SFrame.read_csv(f"{TEMP_PATH}/graph_features.csv")
 
             graph_features = graph_features.join(SFrame(get_female_in_top_10_roles()),
                                                  on={"movie_name": "movie_name", "year": "year"})
@@ -161,7 +161,6 @@ class BechdelClassifier(object):
         train["rating"] = train["rating"] == 3
 
         self.val_title = val.pop('title')
-        self.title = train.pop('title')
         self.X_train = train.drop(
             ["X1", "genres", "imdbid", "originalTitle", 'endYear', 'isAdult', 'tconst',
              'titleType', 'tconst.1', 'titleType.1', 'originalTitle.1', 'isAdult.1', 'startYear.1', 'endYear.1',
@@ -178,6 +177,8 @@ class BechdelClassifier(object):
              'id',
              'imdbid', 'rating',
              'id'], axis=1)
+        self.X_train = self.X_train.sort_values("startYear")
+        self.title = self.X_train.pop('title')
         self.y = self.X_train.pop("rating")
         # bechdel_imdb_rating[(bechdel_imdb_rating["numVotes"] > 5000) & (bechdel_imdb_rating["titleType"] == "movie")][1000:]
 
@@ -188,10 +189,10 @@ class BechdelClassifier(object):
         # triagles_gender["3"] = triagles_gender["X.2"] == "M"
         # triagles_gender["total"] = triagles_gender["1"] + triagles_gender["2"] + triagles_gender["3"]
 
-        moive_triangle = triagles_gender.groupby(["movie", "year", "total"], operations={'count': agg.COUNT()})
+        moive_triangle = triagles_gender.groupby(["movie", "year", "total_men"], operations={'count': agg.COUNT()})
         # type(moive_triangle)
         traingles_at_movie = moive_triangle.to_dataframe().pivot_table(index=["movie", "year"], values="count",
-                                                                       columns='total',
+                                                                       columns='total_men',
                                                                        aggfunc=lambda x: x)
         traingles_at_movie = traingles_at_movie.fillna(0)
 
@@ -202,17 +203,23 @@ class BechdelClassifier(object):
     def train_test(self):
         # self.y = self.bechdel_ml.pop("rating")
         n_valid = 1000
-        X_valid, X_train = split_vals(self.X_train, n_valid)
-        y_valid, y_train = split_vals(self.y, n_valid)
+        X_train, X_valid = split_vals(self.X_train, len(self.X_train) - n_valid)
+        y_train, y_valid = split_vals(self.y, len(self.X_train) - n_valid)
 
         self.clf.fit(X_train, y_train)
         # print_score(self.clf, X_train, y_train, X_valid, y_valid)
-        # from sklearn.metrics import f1_score
-        # y_pred = self.clf.predict(X_valid)
-        # print(f1_score(y_valid, y_pred, average='macro'))
-        # print(f1_score(y_valid, y_pred, average='micro'))
-        # print(f1_score(y_valid,y_valid, y_pred, average='weighted'))
-        # print(f1_score(y_valid, y_pred, average=None))
+        from sklearn.metrics import f1_score
+        y_pred = self.clf.predict(X_valid)
+        print("F1:")
+        print(f1_score(y_valid, y_pred, average='macro'))
+        print(f1_score(y_valid, y_pred, average='micro'))
+        print(f1_score(y_valid,y_valid, y_pred, average='weighted'))
+        print(f1_score(y_valid, y_pred, average=None))
+        print("Recall:")
+        print(recall_score(y_valid, y_pred, average=None))
+        print("Precision:")
+        print(precision_score(y_valid, y_pred, average=None))
+
         return roc_auc_score(y_valid, self.clf.predict_proba(X_valid)[:, 1])
 
     def train(self):

@@ -482,7 +482,7 @@ def generate_actors_file():
 def get_popular_actors():
     actors = imdb_data.popular_actors
     actors = actors[actors["count"] > 5]
-    m_actors = actors[actors['gender'] == "M"].head(500)generate_actors_file
+    m_actors = actors[actors['gender'] == "M"].head(500)
     f_actors = actors[actors['gender'] == "F"].head(500)
     actors = f_actors.append(m_actors)
     ignore_roles_names = load_black_list()
@@ -499,21 +499,25 @@ def get_popular_actors():
 
 
 def generate_blacklist_roles():
-    firstnames = SFrame.read_csv(f"{DATA_PATH}/firstnames.csv")["Name"]
-    surenames = SFrame.read_csv(f"{DATA_PATH}/surenames.csv")["name"]
+    firstnames = SFrame.read_csv(f"{DATA_PATH}/firstnames.csv", verbose=False)["Name"]
+    surenames = SFrame.read_csv(f"{DATA_PATH}/surenames.csv", verbose=False)["name"]
     surenames = surenames.apply(lambda n: n.title())
     sf = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list},
-                         na_values=["\\N"])
+                         na_values=["\\N"], verbose=False)
     sf = sf.filter_by(["actor", "actress"], "category")["tconst", "ordering", "characters", "nconst"]
     sf = sf.join(imdb_data.title[imdb_data.title["titleType"] == "movie"])
     sf = sf.stack("characters", "character")
     sf["character"] = sf["character"].apply(lambda c: c.title())
+    sf.export_csv(f"{TEMP_PATH}/roles3.csv")
+
     whitelist = sf.groupby(key_column_names=['character', "nconst"],
                            operations={'count': agg.COUNT()})
     whitelist = whitelist[whitelist["count"] > 1]['character']
     sf = sf.filter_by(whitelist, "character", True)
     sf = sf.groupby(key_column_names=['character'],
                     operations={'ordering': agg.AVG("ordering"), 'count': agg.COUNT()})
+    sf.export_csv(f"{TEMP_PATH}/roles.csv")
+
     # sf = sf.groupby(key_column_names='character',
     #                 operations={'averageOrder': agg.AVG("ordering"), 'count': agg.COUNT()})
     sf["name"] = sf["character"].apply(lambda c: c.split(" ")[-1].strip())
@@ -527,7 +531,6 @@ def generate_blacklist_roles():
     sf["set"] = sf["character"].apply(lambda x: x.split(" "))
     sf["set"] = sf["set"].apply(lambda x: w & set(x))
     sf = sf[sf['count'] > 11].append(sf[(sf['count'] > 1) & (sf['count'] < 10) & (sf["set"] != [])])
-    sf.export_csv(f"{TEMP_PATH}/roles.csv")
     sf[["character"]].export_csv(f"{TEMP_PATH}/blacklist_roles.csv")
 
 
