@@ -1,22 +1,16 @@
 from turicreate import SFrame
-from subs2graph.consts import DATA_PATH, TEMP_PATH
+from subs2graph.consts import DATA_PATH, DOWNLOAD_PATH
 from turicreate import aggregate as agg
 import pandas as pd
 import math
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import precision_score, recall_score
-from sklearn import metrics
+from sklearn.ensemble import RandomForestClassifier
+
 from sklearn.metrics import roc_auc_score
 
 from subs2graph.imdb_dataset import imdb_data
 import numpy as np
-
-
-def split_vals(a, n): return a[:n].copy(), a[n:].copy()
-
-
-def rmse(x, y): return math.sqrt(((x - y) ** 2).mean())
-
 
 genres = {'Action',
           'Adventure',
@@ -41,17 +35,30 @@ genres = {'Action',
           'War',
           'Western'}
 
+drop_cols = ["X1", "genres", "imdbid", "originalTitle", 'endYear', 'isAdult', 'tconst',
+             'titleType', 'tconst.1', 'titleType.1', 'originalTitle.1', 'isAdult.1', 'startYear.1', 'endYear.1',
+             'runtimeMinutes.1', 'genres.1', 'primaryTitle', 'X1', 'id', 'imdbid', 'id']
+
+
+def split_vals(a, n):
+    return a[:n].copy(), a[n:].copy()
+
+
+from sklearn.metrics import precision_score
+
 
 def print_score(m, X_train, y_train, X_valid, y_valid):
-    res = [rmse(m.predict(X_train), y_train), rmse(m.predict(X_valid), y_valid),
-           m.score(X_train, y_train), m.score(X_valid, y_valid)]
+    res = [
+        (y_train, m.predict_proba(X_train)[:, 1]),
+           roc_auc_score(y_valid, m.predict_proba(X_valid)[:, 1]),
+           precision_score(y_train, m.predict(X_train)), precision_score(y_valid, m.predict(X_valid))]
     if hasattr(m, 'oob_score_'):
         res.append(m.oob_score_)
     print(res)
 
 
 def calculate_gender_centrality():
-    gender_centrality = pd.read_csv(f"{TEMP_PATH}/gender.csv", index_col=0)
+    gender_centrality = pd.read_csv(f"{DOWNLOAD_PATH}/gender.csv", index_col=0)
 
     gender_centrality["rank_pagerank"] = gender_centrality.groupby("movie_name")["pagerank"].rank(
         ascending=False).astype(int)
@@ -78,7 +85,7 @@ def get_female_in_top_10_roles():
 
 
 def get_relationship_triangles():
-    triangles = SFrame.read_csv(f"{TEMP_PATH}/triangles.csv", usecols=["0", "1", "2", "3", "4"])
+    triangles = SFrame.read_csv(f"{DOWNLOAD_PATH}/triangles.csv", usecols=["0", "1", "2", "3", "4"])
     triangles_gender = triangles.apply(
         lambda x: [imdb_data.get_actor_gender(x["0"]), imdb_data.get_actor_gender(x["1"]),
                    imdb_data.get_actor_gender(x["2"])])
@@ -115,6 +122,20 @@ def count_triangles():
     return piv
 
 
+def triangles():
+    triagles_gender = get_relationship_triangles()
+
+    moive_triangle = triagles_gender.groupby(["movie", "year", "total"], operations={'count': agg.COUNT()})
+
+    traingles_at_movie = moive_triangle.to_dataframe().pivot_table(index=["movie", "year"], values="count",
+                                                                   columns='total',
+                                                                   aggfunc=lambda x: x)
+    traingles_at_movie = traingles_at_movie.fillna(0)
+
+    traingles_at_movie = traingles_at_movie.reset_index()
+    return traingles_at_movie
+
+
 class BechdelClassifier(object):
 
     def __init__(self):
@@ -123,30 +144,40 @@ class BechdelClassifier(object):
         self.bechdel["tconst"] = "tt" + self.bechdel["imdbid"]
         self.bechdel_imdb = imdb_data.title.join(self.bechdel)
         self.clf = RandomForestClassifier(n_jobs=-1, n_estimators=100, max_depth=5, random_state=1)
+        self._graph_features = SFrame()
+
+    @property
+    def graph_features(self):
+        if not self.graph_features:
+            try:
+                self.graph_features = SFrame.read_csv(f"{DATA_PATH}/bechdel_features.csv")
+            except:
+                t = triangles()
+                self.graph_features = SFrame.read_csv("../temp/graph_features.csv")
+
+                self.graph_features = self.graph_features.join(SFrame(get_female_in_top_10_roles()),
+                                                               on={"movie_name": "movie_name", "year": "year"})
+                self.graph_features = self.graph_features.join(SFrame(t), on={"movie_name": "movie", "year": "year"})
+                self.graph_features["total_tri"] = self.graph_features["0"] + self.graph_features["1"] + \
+                                                   self.graph_features["2"] + self.graph_features["3"]
+                for i in range(4):
+                    self.graph_features[f"{i}%"] = self.graph_features[str(i)] / self.graph_features["total_tri"]
+
+                self.graph_features.save(f"{DATA_PATH}/bechdel_features.csv", "csv")
+        return self.graph_features
+
+    @graph_features.setter
+    def graph_features(self, value):
+        self._graph_features = value
 
     def build_dataset(self):
-        try:
-            self.graph_features = SFrame.read_csv(f"{DATA_PATH}/bechdel_features.csv")
-        except:
-            t = self.triangles()
-            graph_features = SFrame.read_csv(f"{TEMP_PATH}/graph_features.csv")
 
-            graph_features = graph_features.join(SFrame(get_female_in_top_10_roles()),
-                                                 on={"movie_name": "movie_name", "year": "year"})
-            self.graph_features = graph_features.join(SFrame(t), on={"movie_name": "movie", "year": "year"})
-            self.graph_features["total_tri"] = self.graph_features["0"] + self.graph_features["1"] + \
-                                               self.graph_features["2"] + self.graph_features["3"]
-            for i in range(4):
-                self.graph_features[f"{i}%"] = self.graph_features[str(i)] / self.graph_features["total_tri"]
-
-            self.graph_features.save(f"{DATA_PATH}/bechdel_features.csv", "csv")
         self.graph_features = imdb_data.title.filter_by("movie", "titleType").join(self.graph_features,
                                                                                    on={"primaryTitle": "movie_name",
                                                                                        "startYear": "year"})
         self.graph_features = self.graph_features[self.graph_features["node_number"] > 5]
         bechdel_ml = self.graph_features.join(self.bechdel_imdb,
                                               on={"primaryTitle": "primaryTitle", "startYear": "year"}, how='left')
-        # bechdel_triangles = SFrame(traingles_at_movie).join(self.bechdel_imdb, {"tconst": "tconst"})
 
         bechdel_ml = bechdel_ml[bechdel_ml["genres"] != None]
         bechdel_ml = bechdel_ml.to_dataframe()
@@ -161,26 +192,12 @@ class BechdelClassifier(object):
         train["rating"] = train["rating"] == 3
 
         self.val_title = val.pop('title')
-        self.X_train = train.drop(
-            ["X1", "genres", "imdbid", "originalTitle", 'endYear', 'isAdult', 'tconst',
-             'titleType', 'tconst.1', 'titleType.1', 'originalTitle.1', 'isAdult.1', 'startYear.1', 'endYear.1',
-             'runtimeMinutes.1', 'genres.1', 'primaryTitle',
-             'X1',
-             'id',
-             'imdbid',
-             'id'], axis=1)
-        self.val = val.drop(
-            ["X1", "genres", "imdbid", "originalTitle", 'endYear', 'isAdult', 'tconst',
-             'titleType', 'tconst.1', 'titleType.1', 'originalTitle.1', 'isAdult.1', 'startYear.1', 'endYear.1',
-             'runtimeMinutes.1', 'genres.1', 'primaryTitle',
-             'X1',
-             'id',
-             'imdbid', 'rating',
-             'id'], axis=1)
+        self.X_train = train.drop(drop_cols, axis=1)
+        self.val = val.drop(drop_cols, axis=1)
         self.X_train = self.X_train.sort_values("startYear")
         self.title = self.X_train.pop('title')
         self.y = self.X_train.pop("rating")
-        # bechdel_imdb_rating[(bechdel_imdb_rating["numVotes"] > 5000) & (bechdel_imdb_rating["titleType"] == "movie")][1000:]
+
 
     def triangles(self):
         triagles_gender = get_relationship_triangles()
@@ -200,27 +217,18 @@ class BechdelClassifier(object):
         # bechdel_triangles = SFrame(traingles_at_movie).join(self.bechdel_imdb, {"tconst": "tconst"})
         return traingles_at_movie
 
-    def train_test(self):
-        # self.y = self.bechdel_ml.pop("rating")
+    def train_val(self, additional_metrics={}):
         n_valid = 1000
+        y_pred = []
         X_train, X_valid = split_vals(self.X_train, len(self.X_train) - n_valid)
         y_train, y_valid = split_vals(self.y, len(self.X_train) - n_valid)
-
         self.clf.fit(X_train, y_train)
-        # print_score(self.clf, X_train, y_train, X_valid, y_valid)
-        from sklearn.metrics import f1_score
-        y_pred = self.clf.predict(X_valid)
-        print("F1:")
-        print(f1_score(y_valid, y_pred, average='macro'))
-        print(f1_score(y_valid, y_pred, average='micro'))
-        print(f1_score(y_valid,y_valid, y_pred, average='weighted'))
-        print(f1_score(y_valid, y_pred, average=None))
-        print("Recall:")
-        print(recall_score(y_valid, y_pred, average=None))
-        print("Precision:")
-        print(precision_score(y_valid, y_pred, average=None))
-
-        return roc_auc_score(y_valid, self.clf.predict_proba(X_valid)[:, 1])
+        print_score(self.clf, X_train, y_train, X_valid, y_valid)
+        # from sklearn.metrics import f1_score
+        for k, m in additional_metrics:
+            if not y_pred:
+                y_pred = self.clf.predict(X_valid)
+            print(f"{k}: {m(y_valid, y_pred)}")
 
     def train(self):
         self.clf = RandomForestClassifier(n_jobs=-1, n_estimators=100, max_depth=5, random_state=1)

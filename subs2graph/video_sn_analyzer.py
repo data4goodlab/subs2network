@@ -1,12 +1,10 @@
-import networkx  as nx
+import networkx as nx
 from subs2graph.consts import ROLES_GRAPH, ACTORS_GRAPH, IMDB_RATING, VIDEO_NAME, MOVIE_YEAR
 import numpy as np
 from subs2graph.utils import add_prefix_to_dict_keys
-import os
-import logging
+
 from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.subtitle_analyzer import SubtitleAnalyzer
-import matplotlib.pyplot as plt
 from subs2graph.utils import get_movie_obj
 
 
@@ -15,12 +13,6 @@ class VideoSnAnalyzer(object):
         self._entities_dict = entities_links_dict
         self._video_name = video_name
         self._video_rating = video_rating
-
-    def _temp_func(self, n):
-        if type(n[1]) == str:
-            return n[1]
-        else:
-            return n[1].get("name")
 
     def construct_social_network_graph(self, graph_type=ROLES_GRAPH, min_weight=2):
         if graph_type == ROLES_GRAPH:
@@ -31,7 +23,6 @@ class VideoSnAnalyzer(object):
             raise Exception("Unsupported graph type %s" % graph_type)
 
         g = g.edge_subgraph([(u, v) for (u, v, d) in g.edges(data=True) if d['weight'] >= min_weight])
-
 
         g.graph[IMDB_RATING] = self.video_rating
         g.graph[VIDEO_NAME] = self._video_name
@@ -78,20 +69,6 @@ class VideoSnAnalyzer(object):
     def video_rating(self):
         return self._video_rating
 
-    def draw_graph(self, g, outpath, graph_layout=nx.spring_layout):
-
-        pos = graph_layout(g)
-        plt.figure(num=None, figsize=(15, 15), dpi=150)
-        plt.axis('off')
-        edge_labels = dict([((u, v,), d['weight'])
-                            for u, v, d in g.edges(data=True)])
-
-        nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels)
-        g_df = g.to_pandas_dataframe()
-        nx.draw(g, pos, node_size=500, node_color=g_df['gender'], edge_cmap=plt.cm.Reds, with_labels=True)
-        plt.savefig(outpath)
-        plt.close()
-
 
 if __name__ == "__main__":
     video_name = "The Matrix"
@@ -102,9 +79,7 @@ if __name__ == "__main__":
     e = sa.get_subtitles_entities_links(60)
     va = VideoSnAnalyzer(video_name, e)
     g = va.construct_social_network_graph(ROLES_GRAPH)
-    va.draw_graph(g, f"../temp/{video_name} Roles.png")
     print(nx.info(g))
     g = va.construct_social_network_graph(ACTORS_GRAPH)
-    va.draw_graph(g, f"../temp/{video_name} Players.png")
     print(nx.info(g))
     print(va.get_features_dict(g))

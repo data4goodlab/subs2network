@@ -1,22 +1,19 @@
-from imdb import IMDb
-from imdb.utils import RolesList
-from subs2graph.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE, TEMP_PATH
-import re
-import stop_words
 import logging
-from itertools import permutations, combinations
-from fuzzywuzzy import fuzz, process
-
-from collections import defaultdict, Counter
 import os
 import pickle
+import re
+from collections import defaultdict
 
+import spacy
+import stop_words
+import tmdbsimple as tmdb
+from fuzzywuzzy import process
+from imdb import IMDb
+from nltk.corpus import names
+
+from subs2graph.consts import IMDB_NAME, IMDB_CAST, MIN_NAME_SIZE
 from subs2graph.exceptions import CastNotFound
 from subs2graph.utils import to_iterable
-from nltk.corpus import names
-import spacy
-
-import tmdbsimple as tmdb
 
 # import spacy
 
@@ -63,7 +60,6 @@ class VideoRolesAnalyzer(object):
         for person in m.credits()['cast']:
             if "uncredited" not in person['character']:
                 cast[person['name']] = person['character'].replace(" (voice)", "")
-                # print(f"{person['order']} {person['id']} {person['name']}| {person['character']}| {person['profile_path']}")
         return cast
 
     def _init_roles_dict(self, use_top_k_roles, remove_possessives=True):
@@ -74,8 +70,6 @@ class VideoRolesAnalyzer(object):
         :param remove_possessives: remove roles name which contains possessives, such as Andy's Wife
         :return:
         """
-
-        nlp = spacy.load('en_core_web_sm')
 
         re_possessive = re.compile(r"(\w+\'s\s+\w+|\w+s\'\s+\w+)")
         try:
@@ -88,9 +82,9 @@ class VideoRolesAnalyzer(object):
             tmdb_cast = self.get_tmdb_cast()
         except:
             tmdb_cast = {}
-        for p in cast_list:
+        for i, p in enumerate(cast_list):
             for role in to_iterable(p.currentRole):
-                # if p[IMDB_NAME] in tmdb_cast:
+
                 if role.notes == '(uncredited)':
                     return
                 if role is None or IMDB_NAME not in role.keys():
@@ -99,12 +93,14 @@ class VideoRolesAnalyzer(object):
                     if remove_possessives and len(re_possessive.findall(role[IMDB_NAME])) > 0:
                         logging.info("Skipping role with possessive name - %s" % role[IMDB_NAME])
                         continue
+                    nlp = spacy.load('en_core_web_sm')
+
                     doc = nlp(role[IMDB_NAME])
                     adj = False
                     for token in doc:
                         if token.pos_ == "ADJ":
                             adj = True
-                    if not adj:
+                    if not adj or len(doc) == 1 or i < 4:
                         if p[IMDB_NAME] in tmdb_cast:
                             tmdb_role = tmdb_cast[p[IMDB_NAME]]
                             if len(tmdb_role) > len(role[IMDB_NAME]):
@@ -118,11 +114,10 @@ class VideoRolesAnalyzer(object):
         n = str(role_name).strip().lower().replace('"', '')
         re_white_space = re.compile(r"\b([^\d\W].*?)\b")
         re_apost_name = re.compile(r"^'(.*?)'$")
-        # re_split = re.compile(r"([\w-].*?)")
 
         if re_apost_name.match(n):
             n = re_apost_name.findall(n)[0]
-        # words_set = set(words.words()) - set([n.lower() for n in names.words()])
+
         parts = re_white_space.findall(n)
 
         for name_part in parts:
@@ -141,11 +136,6 @@ class VideoRolesAnalyzer(object):
                 if part not in self._stop_words_english or len(part) > MIN_NAME_SIZE:
                     self._roles_dict[part].add((person, role))
 
-            # if name_part in words_set and len(parts) > 1:
-            #     break
-
-            # if name_part not in self._roles_dict:
-            #     self._roles_dict[name_part] = set()
             self._roles_dict[name_part].add((person, role))
 
     def find_roles_names_in_text(self, txt):
@@ -172,7 +162,8 @@ class VideoRolesAnalyzer(object):
     def find_roles_names_in_text_ner(self, stanford_ner, spacy_ner):
         """
         Find matched roles in the input text
-        :param txt: input text
+        :param spacy_ner:
+        :param stanford_ner:
         :return: set of matched roles in the text
         """
         stanford_res = self.find_roles_names_in_text_stanford_ner(stanford_ner)
@@ -182,7 +173,7 @@ class VideoRolesAnalyzer(object):
     def find_roles_names_in_text_spacy_ner(self, classified_text):
         """
         Find matched roles in the input text
-        :param txt: input text
+        :param classified_text:
         :return: set of matched roles in the text
         """
         matched_roles = set()
@@ -201,9 +192,7 @@ class VideoRolesAnalyzer(object):
             if n in self._roles_dict:
                 if len(self._roles_dict[n]) == 1:
                     return list(self._roles_dict[n])[0]
-                # for actor, role in self._roles_dict[n]:
-                #     if n == role[IMDB_NAME].lower():
-                #         return actor, role
+
                 choices = {role[IMDB_NAME]: (actor, role) for actor, role in self._roles_dict[n]}
                 try:
                     m = process.extractOne(raw_txt, choices.keys(), score_cutoff=90)[0]
@@ -214,7 +203,7 @@ class VideoRolesAnalyzer(object):
     def find_roles_names_in_text_stanford_ner(self, classified_text):
         """
         Find matched roles in the input text
-        :param txt: input text
+        :param classified_text:
         :return: set of matched roles in the text
         """
         matched_roles = set()
@@ -233,37 +222,6 @@ class VideoRolesAnalyzer(object):
                 matched_roles.add(role)
 
         return matched_roles
-
-    def count_apperence_in_text(self, classified_text):
-        """
-        Find matched roles in the input text
-        :param txt: input text
-        :return: set of matched roles in the text
-        """
-        prev_person = []
-        role_counter = Counter()
-        for r, ent_type in classified_text:
-            if ent_type == "PERSON":
-                r = r.lower()
-                prev_person.append(r)
-
-                if r not in self._roles_dict:
-                    continue
-                if len(self._roles_dict[r]) == 1:
-                    role_counter[list(self._roles_dict[r])[0][1][IMDB_NAME]] += 1
-                    continue
-                for actor, role in self._roles_dict[r]:
-                    if r == role[IMDB_NAME].lower():
-                        role_counter[role[IMDB_NAME]] += 1
-                        continue
-                for fr in combinations(prev_person, 2):
-                    for actor, role in self._roles_dict[r]:
-                        if fuzz.token_set_ratio(role[IMDB_NAME], fr) > 95:
-                            role_counter[role[IMDB_NAME]] += 1
-                            break
-            else:
-                prev_person = []
-        return role_counter
 
     def rating(self):
         """

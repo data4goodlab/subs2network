@@ -1,7 +1,8 @@
-from turicreate import SFrame, SArray
-from subs2graph.consts import IMDB_RATING_URL, TEMP_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL, DATA_PATH
-from subs2graph.utils import download_file
 import turicreate.aggregate as agg
+from turicreate import SFrame
+
+from subs2graph.consts import IMDB_RATING_URL, DOWNLOAD_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL, DATA_PATH
+from subs2graph.utils import download_file
 
 
 def get_gender(profession):
@@ -48,15 +49,6 @@ class IMDbDatasets(object):
                 "Dict of primaryName_gender"]
         return self._actors_gender
 
-    # def get_actor_gender(self, actor):
-    #     try:
-    #         return get_gender(self.actors[self.actors["primaryName"] == actor]["primaryProfession"][0])
-    #     except IndexError:
-    #         try:
-    #             return self.get_gender_by_name(actor)
-    #         except IndexError:
-    #             return "U"
-
     def add_actor_gender(self, actor):
         try:
             return get_gender(actor["primaryProfession"])
@@ -84,8 +76,8 @@ class IMDbDatasets(object):
     @property
     def popular_actors(self):
         if self._actors is None:
-            download_file(IMDB_PRINCIPALS_URL, f"{TEMP_PATH}/title.principals.tsv.gz", False)
-            self._actors = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t", na_values=["\\N"],
+            download_file(IMDB_PRINCIPALS_URL, f"{DOWNLOAD_PATH}/title.principals.tsv.gz", False)
+            self._actors = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.principals.tsv.gz", delimiter="\t", na_values=["\\N"],
                                            verbose=self._verbose)
             self._actors = self._actors.filter_by(["actor", "actress"], "category")["tconst", "nconst"]
 
@@ -94,7 +86,7 @@ class IMDbDatasets(object):
             self._actors = self._actors.groupby("nconst", operations={'averageRating': agg.AVG("averageRating"),
                                                                       'count': agg.COUNT()})
             self._actors = self._actors.sort("averageRating", ascending=False)
-            names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
+            names = SFrame.read_csv(f"{DOWNLOAD_PATH}/name.basics.tsv.gz", delimiter="\t")
 
             self._actors = self._actors.join(names)
             self._actors["gender"] = self._actors.apply(lambda p: self.add_actor_gender(p))
@@ -104,10 +96,11 @@ class IMDbDatasets(object):
     @property
     def actors_movies(self):
         if self._actors_movies is None:
-            download_file(IMDB_PRINCIPALS_URL, f"{TEMP_PATH}/title.principals.tsv.gz", False)
-            self._actors_movies = SFrame.read_csv(f"{TEMP_PATH}/title.principals.tsv.gz", delimiter="\t",
+            download_file(IMDB_PRINCIPALS_URL, f"{DOWNLOAD_PATH}/title.principals.tsv.gz", False)
+            self._actors_movies = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.principals.tsv.gz", delimiter="\t",
                                                   na_values=["\\N"], verbose=self._verbose)
-            self._actors_movies = self._actors_movies.filter_by(["actor", "actress"], "category")["tconst", "nconst","characters"]
+            self._actors_movies = self._actors_movies.filter_by(["actor", "actress"], "category")[
+                "tconst", "nconst", "characters"]
             self._actors_movies = self._actors_movies.join(self.title[self.title["titleType"] == "movie"])
             self._actors_movies = self._actors_movies.join(self.all_actors)
         return self._actors_movies
@@ -115,7 +108,7 @@ class IMDbDatasets(object):
     @property
     def all_actors(self):
         if self._all_actors is None:
-            self._all_actors = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t",
+            self._all_actors = SFrame.read_csv(f"{DOWNLOAD_PATH}/name.basics.tsv.gz", delimiter="\t",
                                                na_values=["\\N"], verbose=self._verbose)
             self._all_actors["primaryProfession"] = self._all_actors["primaryProfession"].apply(lambda x: x.split(","))
             self._all_actors = self._all_actors.stack("primaryProfession", "primaryProfession")
@@ -126,8 +119,8 @@ class IMDbDatasets(object):
     @property
     def rating(self):
         if self._rating is None:
-            download_file(IMDB_RATING_URL, f"{TEMP_PATH}/title.ratings.tsv.gz", False)
-            self._rating = SFrame.read_csv(f"{TEMP_PATH}/title.ratings.tsv.gz", delimiter="\t", na_values=["\\N"],
+            download_file(IMDB_RATING_URL, f"{DOWNLOAD_PATH}/title.ratings.tsv.gz", False)
+            self._rating = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.ratings.tsv.gz", delimiter="\t", na_values=["\\N"],
                                            verbose=self._verbose)
             self._rating = self._rating.join(self.title)
         return self._rating
@@ -135,8 +128,8 @@ class IMDbDatasets(object):
     @property
     def crew(self):
         if self._crew is None:
-            download_file(IMDB_CREW_URL, f"{TEMP_PATH}/title.crew.tsv.gz", False)
-            self._crew = SFrame.read_csv(f"{TEMP_PATH}/title.crew.tsv.gz", delimiter="\t", na_values=["\\N"],
+            download_file(IMDB_CREW_URL, f"{DOWNLOAD_PATH}/title.crew.tsv.gz", False)
+            self._crew = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.crew.tsv.gz", delimiter="\t", na_values=["\\N"],
                                          verbose=self._verbose)
             self._crew["directors"] = self.crew["directors"].apply(lambda c: c.split(","))
             self._crew = self._crew.stack("directors", "directors")
@@ -145,8 +138,8 @@ class IMDbDatasets(object):
     @property
     def title(self):
         if self._title is None:
-            download_file(IMDB_TITLES_URL, f"{TEMP_PATH}/title.basics.tsv.gz", False)
-            self._title = SFrame.read_csv(f"{TEMP_PATH}/title.basics.tsv.gz", delimiter="\t", na_values=["\\N"],
+            download_file(IMDB_TITLES_URL, f"{DOWNLOAD_PATH}/title.basics.tsv.gz", False)
+            self._title = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.basics.tsv.gz", delimiter="\t", na_values=["\\N"],
                                           verbose=self._verbose)
         return self._title
 
@@ -177,7 +170,7 @@ class IMDbDatasets(object):
 
         sf = sf[sf["count"] > 5]
 
-        names = SFrame.read_csv(f"{TEMP_PATH}/name.basics.tsv.gz", delimiter="\t")
+        names = SFrame.read_csv(f"{DOWNLOAD_PATH}/name.basics.tsv.gz", delimiter="\t")
         sf = sf.join(names, {"directors": "nconst"})
         return sf.sort("averageRating", ascending=False)
 
@@ -192,6 +185,7 @@ class IMDbDatasets(object):
         m = self.rating[self.rating["primaryTitle"].apply(lambda x: 1 if title in x else 0)]
         m = m[m["numVotes"] > 2000].filter_by("movie", "titleType")
         return m[["primaryTitle", "tconst", "startYear", "averageRating", "numVotes"]].unique()
+
 
 imdb_data = IMDbDatasets()
 # imdb_data.actors

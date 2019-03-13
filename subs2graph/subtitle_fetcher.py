@@ -1,18 +1,19 @@
-import os
-from subs2graph.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH, ROLES_PATH, TEMP_PATH
-from subliminal import video, download_best_subtitles, save_subtitles, region, subtitle
-import babelfish
 import logging
+import os
 import pickle
-from subs2graph.exceptions import SubtitleNotFound
-from guessit.api import GuessitException
-from subs2graph.utils import get_movie_obj
-
 import types
+
+import babelfish
+from guessit.api import GuessitException
+from subliminal import video, download_best_subtitles, save_subtitles, region
+
+from subs2graph.consts import IMDB_ID, VIDEO_NAME, SUBTITLE_PATH, ROLES_PATH, DOWNLOAD_PATH
+from subs2graph.exceptions import SubtitleNotFound
+from subs2graph.utils import get_movie_obj
 
 
 class SubtitleFetcher(object):
-    region.configure('dogpile.cache.dbm', arguments={'filename': f'{TEMP_PATH}/cachefile.dbm'})
+    region.configure('dogpile.cache.dbm', arguments={'filename': f'{DOWNLOAD_PATH}/cachefile.dbm'})
 
     """
     Responsible for fetching the subtitle information including metadata from the open subtitles websites or from
@@ -21,7 +22,7 @@ class SubtitleFetcher(object):
 
     def __init__(self, video_obj, lang=babelfish.Language("eng")):
         """
-        Class constructor which recieve as input a video object of a movie or TV series episode and the language of the
+        Class constructor which receives as input a video object of a movie or TV series episode and the language of the
         video
         :param video_obj: video object that contains a movie's or TV series episode's details
         :param lang: the language of the video as babelfish object
@@ -36,7 +37,7 @@ class SubtitleFetcher(object):
 
     def fetch_subtitle(self, path):
         """
-        Fetch the subtilte using subliminal or from local file
+        Fetch the subtitle using subliminal or from local file
         :param path: the file path to save the subtitle or to load the subtitle details from
         :return:
         :rtype: dict
@@ -84,8 +85,6 @@ class SubtitleFetcher(object):
     def _save_subtitle_info_dict(self, path):
         """
         save subtitle's metadata as a dict object to a file using pickle
-        :param subtitle_obj: dict with the subtitle's metadata that include the video's name, IMDB score, and
-            downloaded subtitle's path
         :param path: the path to save the subtitle's metadata dict using cPcikle
         """
 
@@ -112,7 +111,7 @@ class SubtitleFetcher(object):
             return f"{self._video_obj.series} {self.episode_details_strings()[1]}"
         if self.is_movie:
             return self._video_obj.name
-        raise Exception("Unsuportted video type")
+        raise Exception("Unsupported video type")
 
     def episode_details_strings(self):
         """
@@ -124,23 +123,23 @@ class SubtitleFetcher(object):
         episode_name_list = []
 
         if self.is_episode:
-            episode_name_list.append("S0%sE0%s" % (self._video_obj.season, self._video_obj.episode))
-            episode_name_list.append("S%sE%s" % (self._video_obj.season, self._video_obj.episode))
+            episode_name_list.append(f"S0{self._video_obj.season}E0{self._video_obj.episode}")
+            episode_name_list.append(f"S{self._video_obj.season}E{self._video_obj.episode}")
             e = ""
             if self._video_obj.season < 10:
-                e += "S0%s" % self._video_obj.season
+                e += f"S0{self._video_obj.season}"
             else:
-                e += "S%s" % self._video_obj.season
+                e += f"S{self._video_obj.season}"
             if self._video_obj.episode < 10:
-                e += "E0%s" % self._video_obj.episode
+                e += f"E0{self._video_obj.episode}"
             else:
-                e += "E%s" % self._video_obj.episode
+                e += f"E{self._video_obj.episode}"
             episode_name_list.append(e)
-            e = "S0%s" % self._video_obj.season
+            e = f"S0{self._video_obj.season}"
             if self._video_obj.episode < 10:
-                e += "E0%s" % self._video_obj.episode
+                e += f"E0{self._video_obj.episode}"
             else:
-                e += "E%s" % self._video_obj.episode
+                e += f"E{self._video_obj.episode}"
             episode_name_list.append(e)
         return episode_name_list
 
@@ -166,12 +165,12 @@ class SubtitleFetcher(object):
     def get_episode_obj(video_name, series, season_num, episode_num, episode_name, imdb_id):
         """
         Returns a subliminal TV episode object according to the episode's details
+        :param imdb_id:
         :param video_name: the episode name, which usually consists of the series name and episode details
         :param series: the episode's series name
         :param season_num: the episode's season number
         :param episode_num: the episode number
         :param episode_name: the episode title
-        :param tvdb_id: the episode's id in TheTVDB website
         :return: video.Episode object
         :rtype: video.Episode
         """

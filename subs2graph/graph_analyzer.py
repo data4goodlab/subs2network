@@ -9,6 +9,7 @@ from subs2graph.utils import add_prefix_to_dict_keys
 from subs2graph.imdb_dataset import imdb_data
 from subs2graph.consts import MOVIE_YEAR
 
+
 def get_node_features(g):
     closeness = nx.closeness_centrality(g)
     betweenness = nx.betweenness_centrality(g)
@@ -18,21 +19,11 @@ def get_node_features(g):
     pr_weight = nx.pagerank(g, weight="weight")
     clustering = nx.clustering(g)
     for v in g.nodes():
-        res = {}
-        res["total_weight"] = g.degree(v, weight="weight")
-        res["degree"] = g.degree(v)
-        res["movie_name"] = g.graph["movie_name"]
-        res["year"] = g.graph["movie_year"]
-        res["imdb_rating"] = g.graph["imdb_rating"]
-        res["closeness"] = closeness[v]
-        res["betweenness_weight"] = betweenness_weight[v]
-        res["betweenness"] = betweenness[v]
-        res["degree_centrality"] = degree_centrality[v]
-        res["clustering"] = clustering[v]
-        res["pagerank"] = pr[v]
-        res["pr_weight"] = pr_weight[v]
-        res["gender"] = imdb_data.get_actor_gender(v)
-        res["name"] = v
+        res = {"total_weight": g.degree(v, weight="weight"), "degree": g.degree(v), "movie_name": g.graph["movie_name"],
+               "year": g.graph["movie_year"], "imdb_rating": g.graph["imdb_rating"], "closeness": closeness[v],
+               "betweenness_weight": betweenness_weight[v], "betweenness": betweenness[v],
+               "degree_centrality": degree_centrality[v], "clustering": clustering[v], "pagerank": pr[v],
+               "pr_weight": pr_weight[v], "gender": imdb_data.get_actor_gender(v), "name": v}
         yield res
 
 
@@ -97,22 +88,24 @@ def average_betweenness_centrality(g):
     del stats["count"]
     return add_prefix_to_dict_keys(stats.to_dict(), "betweenness")
 
+
 def average_pagerank(g):
-    stats = pd.Series(list(nx. nx.pagerank(g,weight=None).values())).describe()
+    stats = pd.Series(list(nx.nx.pagerank(g, weight=None).values())).describe()
     del stats["count"]
     return add_prefix_to_dict_keys(stats.to_dict(), "pagerank")
 
+
 def average_weighted_pagerank(g):
-    stats = pd.Series(list(nx. nx.pagerank(g, weight="weight").values())).describe()
+    stats = pd.Series(list(nx.nx.pagerank(g, weight="weight").values())).describe()
     del stats["count"]
     return add_prefix_to_dict_keys(stats.to_dict(), "weighted_pagerank")
-
 
 
 def average_weighted_betweenness_centrality(g):
     stats = pd.Series(list(nx.betweenness_centrality(g).values())).describe()
     del stats["count"]
     return add_prefix_to_dict_keys(stats.to_dict(), "weighted_betweenness")
+
 
 def average_clustering(g):
     try:
@@ -126,6 +119,7 @@ def average_weighted_clustering(g):
         return {"average_weighted_clustering": nx.average_clustering(g, weight="weight")}
     except:
         return {"average_clustering": 0}
+
 
 def graph_clique_number(g):
     return {"clique_number": nx.graph_clique_number(g)}
@@ -144,7 +138,6 @@ def get_node_number(g):
 
 
 def analyze_movies():
-
     p = "../temp/movies/"
     res = []
     for movie in tqdm(os.listdir(p)):
@@ -152,7 +145,8 @@ def analyze_movies():
         g_pth = os.path.join(path, f"json/{movie}.json")
         if not os.path.exists(g_pth):
             g_pth = glob.glob(os.path.join(path, f"json/*.json"))
-            if g_pth: g_pth = g_pth[0]
+            if g_pth:
+                g_pth = g_pth[0]
         if g_pth:
             # try:
             with open(g_pth) as f:
@@ -214,7 +208,7 @@ def analyze_triangles():
                 g = json_graph.node_link_graph(json.load(f))
                 tr = get_triangles(g)
             for t in tr:
-                t.append(g.graph["movie_name"].replace(" - roles",""))
+                t.append(g.graph["movie_name"].replace(" - roles", ""))
                 t.append(g.graph["movie_year"])
             res += tr
 
@@ -257,7 +251,7 @@ def extract_graph_features(g):
     genders = get_genders_in_graph(g)
     d["m_count"] = genders.count("M")
     d["f_count"] = genders.count("F")
-    d["movie_name"] = g.graph["movie_name"].replace(" - roles","")
+    d["movie_name"] = g.graph["movie_name"].replace(" - roles", "")
     d["year"] = g.graph["movie_year"]
     d["imdb_rating"] = g.graph["imdb_rating"]
     return d
@@ -277,7 +271,7 @@ def create_pdf():
     for i, movie in enumerate(tqdm(os.listdir(p), total=len(os.listdir(p)))):
 
         path = os.path.join(p, movie)
-        image = glob.glob(os.path.join(path, f"graphs/*({'[0-9]'*4}).png"))
+        image = glob.glob(os.path.join(path, f"graphs/*({'[0-9]' * 4}).png"))
         if image:
             img = Image.open(image[0]).convert("RGB")
             draw = ImageDraw.Draw(img)
@@ -316,7 +310,6 @@ def gender_in_top_movies():
     p = "../temp/movies/"
     movies = imdb_data.get_movies_data()
     for m in tqdm(movies):
-        gender = []
         movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
         json_path = os.path.join(p, movie_name, "json")
         try:
