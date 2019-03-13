@@ -1,24 +1,26 @@
-from subs2graph.video_roles_analyzer import VideoRolesAnalyzer
-import pysrt
-from collections import Counter, defaultdict
-from subs2graph.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME, STANFORD_NLP_JAR, STANFORD_NLP_MODEL
 import logging
-from subs2graph.subtitle_fetcher import SubtitleFetcher
+import os
+import re
+from collections import Counter, defaultdict
+from itertools import chain
+
+import networkx as nx
+import pysrt
+import spacy
 from nltk.tag import StanfordNERTagger
 from nltk.tokenize import word_tokenize
+
+from subs2graph.consts import IMDB_ID, SUBTITLE_PATH, ROLES_PATH, IMDB_NAME, STANFORD_NLP_JAR, STANFORD_NLP_MODEL, \
+    DOWNLOAD_PATH
 from subs2graph.exceptions import SubtitleNotFound
-import spacy
-import unicodedata, re
-from itertools import chain
+from subs2graph.subtitle_fetcher import SubtitleFetcher
 from subs2graph.utils import get_movie_obj
-import networkx as nx
+from subs2graph.video_roles_analyzer import VideoRolesAnalyzer
 
 
 class RemoveControlChars(object):
 
     def __init__(self):
-        all_chars = (chr(i) for i in range(0x110000))
-        control_chars = ''.join(c for c in all_chars if unicodedata.category(c) == 'Cc')
         # or equivalently and much more efficiently
         control_chars = ''.join(map(chr, chain(range(0, 32), range(127, 160))))
         self.control_char_re = re.compile('[%s]' % re.escape(control_chars))
@@ -44,8 +46,13 @@ class SubtitleAnalyzer(object):
         self._interactions = {}
         if ignore_roles_names is None:
             ignore_roles_names = set()
-        imdb_id = subtitle_info_dict[IMDB_ID]
-        self._video_role_analyzer = VideoRolesAnalyzer(imdb_id.strip('t'), use_top_k_roles, ignore_roles_names,
+
+        if not os.path.exists(subtitle_info_dict[ROLES_PATH]):
+            subtitle_info_dict[ROLES_PATH] = DOWNLOAD_PATH + subtitle_info_dict[ROLES_PATH].split("temp")[1]
+            subtitle_info_dict[SUBTITLE_PATH] = DOWNLOAD_PATH + subtitle_info_dict[SUBTITLE_PATH].split("temp")[1]
+
+        imdb_id = subtitle_info_dict[IMDB_ID].strip('t')
+        self._video_role_analyzer = VideoRolesAnalyzer(imdb_id, use_top_k_roles, ignore_roles_names,
                                                        subtitle_info_dict[ROLES_PATH])
 
         subtitle_srt_path = subtitle_info_dict[SUBTITLE_PATH]
@@ -58,11 +65,11 @@ class SubtitleAnalyzer(object):
         subs = pysrt.open(subtitle_path)
         subs_entities_timeline_dict = {}
 
-        re_brackets_split = re.compile("(\[.*?\]|.*?\:|^\(.*?\)$)")
+        re_brackets_split = re.compile(r"(\[.*?\]|.*?:|^\(.*?\)$)")
         # (\[(.* ?)\] | (.* ?)\: | ^ \((.* ?)\)$)
         cc = RemoveControlChars()
         subs_clean = [cc.remove_control_chars(s.text.strip('-\\\/').replace("\n", " ")) for s in subs]
-        subs_clean = [re.sub('<[^<]+?>', '', s) for s in subs_clean]
+        subs_clean = [re.sub(r'<[^<]+?>', '', s) for s in subs_clean]
         brackets = [re_brackets_split.findall(s) for s in subs_clean]
         subs_text = [word_tokenize(s) for s in subs_clean]
         st = StanfordNERTagger(STANFORD_NLP_MODEL,
@@ -72,9 +79,7 @@ class SubtitleAnalyzer(object):
         entities_spacy = [[(ent.text, ent.label_) for ent in nlp(s).ents] for s in subs_clean]
 
         entities_nltk = st.tag_sents(subs_text)
-        # role_counter = Counter()
-        # for e in entities:
-        #     role_counter += self._video_role_analyzer.count_apperence_in_text(e)
+
         for s, e_n, e_s, b in zip(subs, entities_nltk, entities_spacy, brackets):
             roles = self._video_role_analyzer.find_roles_names_in_text_ner(e_n, e_s)
             for item in b:
@@ -89,23 +94,19 @@ class SubtitleAnalyzer(object):
     def get_subtitles_entities_links(self, timelaps_seconds):
 
         timeline = sorted(self._subs_entities_timeline_dict.items(), key=lambda x: x[0])
-        edges_counter = Counter()
         graphs = [nx.Graph(), nx.Graph()]
         for i, item in enumerate(timeline):
             t1, entities1 = item
             self.update_appearances(graphs, entities1, t1)
             if len(entities1) > 1:
                 edges = self._get_edges(entities1, entities1)
-                edges_counter.update(edges)
-                self.update_interaction(graphs, edges, t1, edges_counter)
+                self.update_interaction(graphs, edges, t1)
             for t2, entities2 in timeline[i + 1:]:
                 if t2 - t1 < timelaps_seconds:
                     edges = self._get_edges(entities1, entities2)
-                    edges_counter.update(edges)
                     self.update_appearances(graphs, entities1, t1)
                     self.update_appearances(graphs, entities2, t2)
-                    edges_counter.update(self._get_edges(entities1, entities1))
-                    self.update_interaction(graphs, edges, t2, edges_counter)
+                    self.update_interaction(graphs, edges, t2)
 
                 else:
                     break
@@ -119,14 +120,13 @@ class SubtitleAnalyzer(object):
                 if r in g.node:
                     g.node[r]["last"] = t
                 else:
-                    g.add_node(r, **{"first": t, "last": t, "role":role[1-i][IMDB_NAME]})
+                    g.add_node(r, **{"first": t, "last": t, "role": role[1 - i][IMDB_NAME]})
 
     @staticmethod
-    def update_interaction(graphs, roles, t, weights):
+    def update_interaction(graphs, roles, t):
         for i, g in enumerate(graphs):
             for role in roles:
                 v, u = role[0][i][IMDB_NAME], role[1][i][IMDB_NAME]
-                weight = weights[role]
                 if (v, u) in g.edges:
                     g.adj[v][u]["last"] = t
                     g.adj[v][u]["weight"] += 1

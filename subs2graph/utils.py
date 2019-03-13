@@ -1,13 +1,19 @@
-from subliminal import video
+import json
 import logging
-import requests
-import os, shutil
-from tqdm import tqdm
+import os
+import shutil
 import sys
 
+import networkx as nx
+import requests
+from networkx.readwrite import json_graph
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, Content
-
+from subliminal import video
+from tqdm import tqdm
+import glob
+from subs2graph.consts import DOWNLOAD_PATH
+from turicreate import SFrame
 
 def send_email(send_to, subject, mail_content):
     try:
@@ -17,7 +23,7 @@ def send_email(send_to, subject, mail_content):
         to_email = Email(send_to)
         content = Content("text/plain", mail_content)
         mail = Mail(from_email, subject, to_email, content)
-        response = sg.client.mail.send.post(request_body=mail.get())
+        sg.client.mail.send.post(request_body=mail.get())
     except:
         return False
     return True
@@ -43,18 +49,18 @@ def get_movie_obj(name, title, year, imdb_id):
     :rtype: video.Movie
     """
     logging.info("Fetching Subtitle For Movie:%s | Year: %s | IMDB ID: %s " % (title, year, imdb_id))
-    return video.Movie( name=name, title=title, year=year, imdb_id=imdb_id)
+    return video.Movie(name=name, title=title, year=year, imdb_id=imdb_id)
 
 
 def get_episode_obj(video_name, series, season_num, episode_num, episode_name, imdb_id):
     """
     Returns a subliminal TV episode object according to the episode's details
+    :param imdb_id:
     :param video_name: the episode name, which usually consists of the series name and episode details
     :param series: the episode's series name
     :param season_num: the episode's season number
     :param episode_num: the episode number
     :param episode_name: the episode title
-    :param tvdb_id: the episode's id in TheTVDB website
     :return: video.Episode object
     :rtype: video.Episode
     """
@@ -66,12 +72,12 @@ def get_episode_obj(video_name, series, season_num, episode_num, episode_name, i
 def get_lazy_episode_obj(video_name, series, season_num, episode_num, episode_name, imdb_id):
     """
     Returns a subliminal TV episode object according to the episode's details
+    :param imdb_id:
     :param video_name: the episode name, which usually consists of the series name and episode details
     :param series: the episode's series name
     :param season_num: the episode's season number
     :param episode_num: the episode number
     :param episode_name: the episode title
-    :param tvdb_id: the episode's id in TheTVDB website
     :return: video.Episode object
     :rtype: video.Episode
     """
@@ -108,13 +114,10 @@ def to_iterable(item):
     return item
 
 
-import glob
-
-
 def delete_movies_results(p):
     for movie in os.listdir(p):
         path = os.path.join(p, movie)
-        if glob.glob(os.path.join(path, f"subtitles/{movie}*roles.pkl")):
+        if glob.glob(os.path.join(path, f"subtitles/*.srt")):
             try:
                 os.remove(glob.glob(os.path.join(path, f"subtitles/{movie}*roles.pkl"))[0])
                 os.remove(os.path.join(path, f"{movie}.json"))
@@ -125,5 +128,46 @@ def delete_movies_results(p):
         shutil.rmtree(os.path.join(path, "csv"), ignore_errors=True)
 
 
-if __name__ == "__main__":
-    delete_movies_results(sys.argv[1])
+#f"{DOWNLOAD_PATH}/movies/*/subtitles/*.srt"
+def move_files(src_regex, dst):
+    for movie in glob.glob(src_regex):
+        shutil.copyfile(movie, os.path.join(dst, os.path.basename(movie)))
+
+
+def convert_json_to_gfx(json_path_iter):
+    for json_path in json_path_iter:
+        with open(json_path) as f:
+            g = json_graph.node_link_graph(json.load(f))
+            nx.write_graphml(g, f"{json_path.split('.')[0]}.graphml")
+
+
+def combine_json_graphs(json_path_iter):
+    graphs = []
+    for json_path in json_path_iter:
+        with open(json_path) as f:
+            graphs.append(json_graph.node_link_graph(json.load(f)))
+    joined_graph = nx.compose_all(graphs)
+    nx.write_graphml(joined_graph, f"joined_graph.graphml")
+
+
+def combine_distinct_json_graphs(json_path_iter):
+    graphs = []
+    c = 0
+    sf = SFrame.read_json('starwars.json')
+    for json_path in json_path_iter:
+        with open(json_path) as f:
+            g = json_graph.node_link_graph(json.load(f))
+            for v in g.nodes:
+                g.node[v]["year"] = str(g.graph["movie_year"])
+                try:
+                    g.node[v]["image_url"] = sf[sf["title"] == v]["base_images"][0]['desktop']['ratio_1x1']
+                except IndexError:
+                    g.node[v]["image_url"] = ""
+            g = nx.convert_node_labels_to_integers(g, first_label=c, label_attribute="name")
+            c += len(g.nodes)
+            graphs.append(g)
+    joined_graph = nx.compose_all(graphs)
+    nx.write_graphml(joined_graph, f"joined_graph.graphml")
+
+# starw = glob.glob("/Users/dimakagan/Projects/subs2graph/output/star/d3/*.json")
+# combine_distinct_json_graphs(starw)

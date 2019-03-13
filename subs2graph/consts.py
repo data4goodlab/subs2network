@@ -34,7 +34,7 @@ ACTORS_GRAPH = "actors_graph"
 MAX_YEAR = 2018
 dirname, filename = os.path.split(os.path.abspath(__file__))
 BASEPATH = f"{dirname}/{os.getenv('RELATIVE_PATH')}"
-TEMP_PATH = f"{BASEPATH}temp"
+DOWNLOAD_PATH = f"{BASEPATH}temp"
 DATA_PATH = f"{BASEPATH}data"
 THE_TVDB_URL = r"http://thetvdb.com/data/series/%s/all/en.xml"
 
