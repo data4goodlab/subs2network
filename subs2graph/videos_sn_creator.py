@@ -154,7 +154,7 @@ def save_graphs_features(graphs_list, features_path, remove_unintresting_feature
             else:
                 l.append("0")
         csv_lines.append(sep.join(l))
-    with open(features_path, "w") as f:
+    with open(features_path, "w", encoding='utf-8') as f:
         f.write("\n".join(csv_lines))
 
 
@@ -311,7 +311,7 @@ def save_episode_graph_to_csv(g, series_name, season_num, episode_num, rating, o
         with open(outpath, "a") as f:
             f.write("\n".join(csv_lines))
     else:
-        with open(outpath, "w") as f:
+        with open(outpath, "w", encoding='utf-8') as f:
             f.write("\n".join(csv_lines))
 
 
@@ -324,10 +324,10 @@ def save_movie_graph_to_csv(g, movie_name, rating, outpath, add_headers=False, s
         r = [movie_name, v, u, str(g.adj[v][u][WEIGHT]), str(rating)]
         csv_lines.append(sep.join(r))
     if append_to_file:
-        with open(outpath, "a") as f:
+        with open(outpath, "a", encoding='utf-8') as f:
             f.write("\n".join(csv_lines))
     else:
-        with open(outpath, "w") as f:
+        with open(outpath, "w", encoding='utf-8') as f:
             f.write("\n".join(csv_lines))
 
 
@@ -393,7 +393,7 @@ def save_graphs_outputs(graphs, name):
 
 
 def load_black_list():
-    with open(f"{DATA_PATH}/blacklist_roles.csv") as f:
+    with open(f"{DATA_PATH}/blacklist_roles.csv", encoding='utf-8') as f:
         return f.read().splitlines()
 
 
@@ -435,8 +435,10 @@ def generate_movies_graphs(movies_sf, overwrite=False, resume=False):
     resume_id = 0
     if resume:
         movies_sf = movies_sf.add_row_number()
-        last_m = sorted([(f, os.path.getmtime(f"{DOWNLOAD_PATH}/movies/{f}")) for f in os.listdir(f"{DOWNLOAD_PATH}/movies/")],
-                        key=lambda x: x[1])[0][0]
+        last_m = \
+            sorted(
+                [(f, os.path.getmtime(f"{DOWNLOAD_PATH}/movies/{f}")) for f in os.listdir(f"{DOWNLOAD_PATH}/movies/")],
+                key=lambda x: x[1])[0][0]
         resume_id = movies_sf[movies_sf["primaryTitle"] == last_m]["id"][0]
     for m in movies_sf[resume_id:]:
         movie_name = m['primaryTitle'].replace('.', '').replace('/', '')
@@ -476,7 +478,8 @@ def get_best_directors():
             director_name = d['primaryName'].replace('.', '').replace('/', '')
             if not os.path.exists(f"{DOWNLOAD_PATH}/directors/{director_name}/{director_name}.json"):
                 generate_director_movies_graphs(director_name, ignore_roles_names)
-                with open(f"{DOWNLOAD_PATH}/directors/{director_name}/{director_name}.json", "w") as f:
+                with open(f"{DOWNLOAD_PATH}/directors/{director_name}/{director_name}.json", "w",
+                          encoding='utf-8') as f:
                     f.write(json.dumps(d))
         except UnicodeEncodeError:
             pass
@@ -518,7 +521,7 @@ def get_popular_actors():
         actor_name = a['primaryName'].replace('.', '').replace('/', '')
 
         generate_actor_movies_graphs(actor_name, ignore_roles_names=ignore_roles_names, filmography=filmography_type)
-        with open(f"{DOWNLOAD_PATH}/actors/{actor_name}/{actor_name}.json", "w") as f:
+        with open(f"{DOWNLOAD_PATH}/actors/{actor_name}/{actor_name}.json", "w", encoding='utf-8') as f:
             f.write(json.dumps(a))
 
 
@@ -526,7 +529,8 @@ def generate_blacklist_roles():
     firstnames = SFrame.read_csv(f"{DATA_PATH}/firstnames.csv", verbose=False)["Name"]
     surenames = SFrame.read_csv(f"{DATA_PATH}/surenames.csv", verbose=False)["name"]
     surenames = surenames.apply(lambda n: n.title())
-    sf = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.principals.tsv.gz", delimiter="\t", column_type_hints={"characters": list},
+    sf = SFrame.read_csv(f"{DOWNLOAD_PATH}/title.principals.tsv.gz", delimiter="\t",
+                         column_type_hints={"characters": list},
                          na_values=["\\N"])
     sf = sf.filter_by(["actor", "actress"], "category")["tconst", "ordering", "characters", "nconst"]
     sf = sf.join(imdb_data.title[imdb_data.title["titleType"] == "movie"])
