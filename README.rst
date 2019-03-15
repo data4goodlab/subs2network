@@ -1,5 +1,5 @@
 ==========
-subs2graph
+subs2network
 ==========
 
 
