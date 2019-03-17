@@ -15,8 +15,9 @@ if __name__ == "__main__":
         # generate_actors_file()
         # get_bechdel_movies()
         # get_movies_by_character("James Bond", True)
-        get_movies_by_title("Star Wars", True)
-        generate_movie_graph("The Godfather", 1972, "0068646", {"averageRating": 9.2})
+        # get_movies_by_title("Star Wars", True)
+        generate_movie_graph("The Innkeepers", 2011, "1594562", {"averageRating": 5.5})
+
         # get_popular_movies(resume=True)
         # get_best_directors()
     except Exception as e:
