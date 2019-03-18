@@ -1,10 +1,10 @@
 import traceback
-from subs2graph.consts import DEBUG
-from subs2graph.utils import send_email
-from subs2graph.videos_sn_creator import get_best_directors, get_best_movies, get_worst_movies, generate_movie_graph, \
-    get_popular_movies, get_popular_actors, generate_actor_movies_graphs, load_black_list, generate_actors_file, \
+from subs2network.consts import DEBUG
+from subs2network.utils import send_email
+from subs2network.videos_sn_creator import get_best_directors, get_best_movies, get_worst_movies, generate_movie_graph, \
+    get_popular_movies, get_popular_actors, generate_actor_movies_graphs, get_black_list, generate_actors_file, \
     get_bechdel_movies, generate_blacklist_roles, get_movies_by_character, get_movies_by_title
-import cProfile
+
 if __name__ == "__main__":
     try:
 
@@ -22,8 +22,8 @@ if __name__ == "__main__":
         # get_best_directors()
     except Exception as e:
         if not DEBUG:
-            send_email("dimakagan15@gmail.com", "Subs2Graph Code Crashed & Exited", traceback.format_exc())
+            send_email("dimakagan15@gmail.com", "subs2network Code Crashed & Exited", traceback.format_exc())
         else:
             raise e
     if not DEBUG:
-        send_email("dimakagan15@gmail.com", "Subs2Graph Code Finished", "Code Finished")
+        send_email("dimakagan15@gmail.com", "subs2network Code Finished", "Code Finished")
