@@ -9,8 +9,6 @@ This is an alpha version, additional refactoring and code cleanup are planned to
  ```
  pip install https://github.com/data4goodlab/subs2network/master
  ```
- ###
- pip install
  ### Dev
 ```
 git clone https://github.com/data4goodlab/subs2network.git
@@ -19,6 +17,9 @@ pipenv install
 
 ## Usage
 ```
+from subs2network.consts import set_output_path
+from subs2network.videos_sn_creator import generate_movie_graph
+set_output_path("/My path")
 generate_movie_graph("Movie Name", year, imdb_id)
 ```
 The generated graph will be saved at \Users\Your-User\.subs2net\output\movies\Movie Name

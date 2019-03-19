@@ -4,7 +4,7 @@ from subs2network.utils import send_email
 from subs2network.videos_sn_creator import get_best_directors, get_best_movies, get_worst_movies, generate_movie_graph, \
     get_popular_movies, get_popular_actors, generate_actor_movies_graphs, get_black_list, generate_actors_file, \
     get_bechdel_movies, generate_blacklist_roles, get_movies_by_character, get_movies_by_title
-
+from subs2network.consts import set_output_path
 if __name__ == "__main__":
     try:
 

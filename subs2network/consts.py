@@ -58,3 +58,8 @@ STANFORD_NLP_JAR = f"{BASEPATH}/ner/stanford-ner.jar"
 STANFORD_NLP_JAR_URL = "https://github.com/data4goodlab/subs2network/raw/master/ner/stanford-ner.jar"
 STANFORD_NLP_MODEL_URL = "https://github.com/data4goodlab/subs2network/raw/master/ner/classifiers/english.all.3class.distsim.crf.ser.gz"
 DEBUG = True
+
+
+def set_output_path(output_path):
+    global OUTPUT_PATH
+    OUTPUT_PATH = output_path
