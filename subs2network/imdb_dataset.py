@@ -1,7 +1,8 @@
 import turicreate.aggregate as agg
 from turicreate import SFrame
 
-from subs2network.consts import IMDB_RATING_URL, OUTPUT_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL, DATA_PATH
+from subs2network.consts import IMDB_RATING_URL, OUTPUT_PATH, IMDB_CREW_URL, IMDB_TITLES_URL, IMDB_PRINCIPALS_URL, \
+    DATA_PATH, IMDB_NAMES_URL
 from subs2network.utils import download_file
 
 
@@ -108,6 +109,7 @@ class IMDbDatasets(object):
     @property
     def all_actors(self):
         if self._all_actors is None:
+            download_file(IMDB_NAMES_URL, f"{OUTPUT_PATH}/name.basics.tsv.gz", False)
             self._all_actors = SFrame.read_csv(f"{OUTPUT_PATH}/name.basics.tsv.gz", delimiter="\t",
                                                na_values=["\\N"], verbose=self._verbose)
             self._all_actors["primaryProfession"] = self._all_actors["primaryProfession"].apply(lambda x: x.split(","))
