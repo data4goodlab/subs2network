@@ -22,4 +22,4 @@ from subs2network.videos_sn_creator import generate_movie_graph
 set_output_path("/My path")
 generate_movie_graph("Movie Name", year, imdb_id)
 ```
-If set_output_path is not defined, the generated graph will be saved at a def \Users\Your-User\.subs2net\output\movies\Movie Name
+If set_output_path is not defined, the generated graph will be saved at a def \Users\Your-User\\.subs2net\output\movies\Movie Name
