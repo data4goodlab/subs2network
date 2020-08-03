@@ -3,7 +3,7 @@
 
 Subs2net is a python package that converts srt subtitles into a social network of interaction between the movie characters.
 This is an alpha version, additional refactoring and code cleanup are planned to improve usability and  simplicity.
- More details on the project can be find in the our paper titled ["Using Data Science to Understand the Film Industry's Gender Gap"](https://arxiv.org/abs/1903.064690)
+ More details on the project can be find in the our paper titled ["Using Data Science to Understand the Film Industry's Gender Gap"](https://www.nature.com/articles/s41599-020-0436-1)
  
  ## Installation
  ```
