@@ -7,7 +7,7 @@ This is an alpha version, additional refactoring and code cleanup are planned to
  
  ## Installation
  ```
- pip install https://github.com/data4goodlab/subs2network/master
+ pip install -e git+https://github.com/data4goodlab/subs2network.git#egg=subs2network
  ```
  ### Dev
 ```
