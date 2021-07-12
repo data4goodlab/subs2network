@@ -12,8 +12,10 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = "\n" + f.read()
 
 requirements = [
-    'networkx>=2.2',
+    'matplotlib==3.03'
+    'networkx==2.2',
     'pysrt',
+    'sendgrid',
     'babelfish',
     'numpy',
     'turicreate',
@@ -25,6 +27,8 @@ requirements = [
     'python-dotenv',
     'tmdbsimple',
     'tqdm',
+    'nltk==3.3',
+    'python-Levenshtein',
     'scikit-learn>=0.20.1'
 ]
 setup_requirements = ['pytest-runner', ]
@@ -57,3 +61,8 @@ setup(
     version='0.4.0',
     zip_safe=False,
 )
+
+import nltk
+nltk.download('names')
+nltk.download('punkt')
+nltk.download('words')
