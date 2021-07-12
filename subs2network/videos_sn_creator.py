@@ -98,7 +98,7 @@ def get_person_movies_graphs(actor_name, filmography, person_type="actors", min_
         # try:
         create_dirs("movies", title)
 
-        subtitles_path = f"{OUTPUT_PATH}/movies/{title}/subtitles"
+        subtitles_path = f"{OUTPUT_PATH}/subtitles"
         graph_path = f"{OUTPUT_PATH}/movies/{title}/"
         if not os.path.exists(f"{OUTPUT_PATH}/{person_type}/{actor_name}/json/{title}.json"):
             if not os.path.exists(f"{graph_path}/{title}.json"):
@@ -352,7 +352,7 @@ def create_dirs(t, name):
 def generate_series_graphs(name, s_id, seasons_set, episodes_set):
     create_dirs("series", name)
     graphs = []
-    for g in get_tvseries_graphs(name, s_id, seasons_set, episodes_set, f"{OUTPUT_PATH}/series/{name}/subtitles"):
+    for g in get_tvseries_graphs(name, s_id, seasons_set, episodes_set, f"{BASEPATH}/subtitles"):
         save_output([g], "series", name)
         graphs.append(g)
     save_graphs_features(graphs, f"{OUTPUT_PATH}/series/{name}/{name} features.tsv", True)
