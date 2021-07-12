@@ -98,7 +98,7 @@ def get_person_movies_graphs(actor_name, filmography, person_type="actors", min_
         # try:
         create_dirs("movies", title)
 
-        subtitles_path = f"{OUTPUT_PATH}/subtitles"
+        subtitles_path = f"{BASEPATH}/subtitles"
         graph_path = f"{OUTPUT_PATH}/movies/{title}/"
         if not os.path.exists(f"{OUTPUT_PATH}/{person_type}/{actor_name}/json/{title}.json"):
             if not os.path.exists(f"{graph_path}/{title}.json"):

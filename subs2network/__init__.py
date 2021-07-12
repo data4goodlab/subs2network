@@ -4,4 +4,4 @@
 
 __author__ = """Dima Kagan"""
 __email__ = 'kagandi@post.bgu.ac.il'
-__version__ = '0.4.0'
+__version__ = '0.4.2'
