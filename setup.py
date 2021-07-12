@@ -12,7 +12,7 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     readme = "\n" + f.read()
 
 requirements = [
-    'matplotlib==3.03'
+    'matplotlib==3.0.3',
     'networkx==2.2',
     'pysrt',
     'sendgrid',
