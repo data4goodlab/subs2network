@@ -271,7 +271,8 @@ def get_person_movies(person_name, types=None):
     im = IMDb()
     p = im.search_person(person_name)[0]
     m_list = im.get_person_filmography(p.getID())
-    person_filmography = dict(item for m in m_list['data']['filmography'] for item in m.items())
+    # person_filmography = dict(item for m in m_list['data']['filmography'] for item in m.items())
+    person_filmography = m_list['data']['filmography']
     for t in types:
         if t in person_filmography:
             m_list = person_filmography[t]

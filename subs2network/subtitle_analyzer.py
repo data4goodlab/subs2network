@@ -31,7 +31,7 @@ class RemoveControlChars(object):
 
 class SubtitleAnalyzer(object):
     """
-    Fetch and analyze subtitle of a movie and use it to construct the conncetion between the movie various roles
+    Fetch and analyze subtitle of a movie and use it to construct the connection between the movie various roles
     """
 
     def __init__(self, subtitle_info_dict, use_top_k_roles=None, ignore_roles_names=None):
